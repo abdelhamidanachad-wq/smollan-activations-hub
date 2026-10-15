@@ -6,7 +6,7 @@ import {
   LayoutDashboard, Menu, MoreHorizontal,
   Package, Plus, Search, Settings2, ShieldCheck, Smartphone,
   Sparkles, Truck, Users, WalletCards, X, Zap, Building2,
-  HardDrive, CalendarClock
+  HardDrive, CalendarClock, Bot, MessageCircle, Workflow, Send, WandSparkles, Play, Pause, Check, Paperclip, Headphones, CircleHelp
 } from 'lucide-react';
 
 const navGroups = [
@@ -21,6 +21,9 @@ const navGroups = [
     { id: 'production', label: 'Production & BAT', icon: FileCheck2, count: '5' },
     { id: 'stock', label: 'PLV, goodies & stock', icon: Package },
     { id: 'digital', label: 'Jeux digitaux', icon: Zap },
+    { id: 'assistant', label: 'Assistant IA', icon: Bot, count: 'IA' },
+    { id: 'whatsapp', label: 'WhatsApp', icon: MessageCircle, count: '3' },
+    { id: 'automations', label: 'Automatisations', icon: Workflow },
   ]},
   { label: 'GESTION', items: [
     { id: 'finance', label: 'Finance & documents', icon: WalletCards, count: '8' },
@@ -146,6 +149,9 @@ function App() {
           active === 'projects' ? <Projects filteredProjects={filteredProjects} filter={filter} setFilter={setFilter} onCreate={() => setShowCreate(true)} search={search} acknowledge={acknowledge}/> :
           active === 'tasks' ? <Tasks tasks={tasks} markDone={markDone} onCreate={() => setShowCreate(true)}/> :
           active === 'calendar' ? <CalendarPage acknowledge={acknowledge}/> :
+          active === 'assistant' ? <AssistantPage acknowledge={acknowledge}/> :
+          active === 'whatsapp' ? <WhatsAppPage acknowledge={acknowledge}/> :
+          active === 'automations' ? <AutomationsPage acknowledge={acknowledge}/> :
           active === 'superadmin' ? <SuperAdminPage acknowledge={acknowledge}/> :
           <ModulePage active={active} selected={selected} acknowledge={acknowledge} onCreate={() => setShowCreate(true)}/>}
       </div>
@@ -250,6 +256,95 @@ function ModulePage({active,selected,acknowledge,onCreate}) {
  return <><div className="page-heading-row"><div><div className="eyebrow"><span className="eyebrow-dot"/> {c.eyebrow}</div><h1>{c.title}<span className="title-period">.</span></h1><p className="page-subtitle">{c.subtitle}</p></div><button className="button-primary" onClick={onCreate}><Plus size={16}/> Nouvelle tâche</button></div><div className="demo-alert"><Activity size={16}/><div><strong>Module en préfiguration</strong><span>Chiffres et éléments ci-dessous sont des exemples de mise en page, pas des données opérationnelles réelles.</span></div><span className="demo-pill">PREVIEW</span></div><div className="module-stat-grid">{c.stats.map(s=><div className="module-stat" key={s[0]}><span>{s[0]}</span><strong>{s[1]}</strong><ArrowUpRight size={15}/></div>)}</div><div className="module-layout"><div className="panel module-checklist"><div className="panel-header"><div><div className="section-eyebrow">FONCTIONNALITÉS</div><h2>Ce que ce module centralise</h2></div><div className="module-big-icon"><Icon size={20}/></div></div><div className="feature-list">{c.tasks.map((t,i)=><button key={t} className="feature-item" onClick={()=>acknowledge('Fonction à relier à la base sécurisée : '+t)}><span className="feature-number">0{i+1}</span><span>{t}</span><ChevronRight size={15}/></button>)}</div></div><div className="panel next-steps"><div className="section-eyebrow">PROCHAINE ÉTAPE</div><div className="next-icon"><Sparkles size={20}/></div><h3>Mettre ce flux en place</h3><p>{c.next}</p><button className="button-secondary full-width" onClick={()=>acknowledge('Action notée dans la maquette. Le suivi réel sera disponible après connexion du backend.')}>Préparer la configuration <ArrowRight size={15}/></button><div className="security-note"><ShieldCheck size={15}/><span>Rôles et permissions requis avant accès aux données réelles.</span></div></div></div></>;
 }
 
+
+
+function AssistantPage({ acknowledge }) {
+  const [input, setInput] = useState('');
+  const [activePrompt, setActivePrompt] = useState('today');
+  const [messages, setMessages] = useState([
+    { role: 'assistant', text: "Bonjour ! Je suis l’assistant SMOLLAN. Je peux vous aider à préparer une activation, suivre les validations, rédiger un message terrain ou transformer une demande en tâches. Les réponses ci-dessous utilisent uniquement les données de démonstration." },
+    { role: 'assistant', text: "J’ai repéré 3 priorités dans le scénario de démo : valider le BAT Galaxy, confirmer les tailles des uniformes Ariel et clôturer le pointage du sampling Coca-Cola." }
+  ]);
+  const prompts = [
+    { id:'today', icon: CalendarDays, title:'Préparer ma journée', prompt:'Prépare ma journée et liste les priorités.' },
+    { id:'activation', icon: Zap, title:'Lancer une activation', prompt:'Donne-moi une checklist de lancement d’activation retail.' },
+    { id:'followup', icon: MessageCircle, title:'Rédiger une relance', prompt:'Rédige une relance professionnelle pour un BAT en attente.' },
+    { id:'tasks', icon: ClipboardCheck, title:'Créer un plan d’action', prompt:'Transforme les validations en retard en plan d’action.' }
+  ];
+  const send = (text) => {
+    const value=(text || input).trim(); if(!value) return;
+    const lower=value.toLowerCase();
+    let answer="Je peux préparer un brouillon, une checklist ou un plan d’action. Pour agir sur les données réelles, l’assistant devra être connecté aux outils autorisés et vérifier vos permissions.";
+    if(lower.includes('journée') || lower.includes('priorit')) answer="Plan de journée proposé :\n1. Avant midi — obtenir la validation du BAT Galaxy et confirmer le bon à tirer final.\n2. Avant 15 h — récupérer les tailles et quantités d’uniformes Ariel.\n3. Fin de journée — vérifier le pointage du sampling Coca-Cola et signaler les écarts au chef de projet.\n\nJe peux convertir ces points en tâches assignables lorsque le backend sera connecté.";
+    else if(lower.includes('activation') || lower.includes('checklist')) answer="Checklist de lancement : brief et objectifs validés → budget/devis et PO confirmés → magasins et dates verrouillés → recrutement/formation terminés → BAT, PLV et uniformes approuvés → stock préparé → dispatch confirmé → présence terrain planifiée → reporting, photos et bilan post-activation.";
+    else if(lower.includes('relance') || lower.includes('bat')) answer="Objet : Relance — validation du BAT\n\nBonjour,\nNous revenons vers vous concernant le BAT en attente de validation. Afin de sécuriser le planning de production et la livraison, pourriez-vous nous transmettre votre retour ou votre bon pour accord ?\n\nMerci d’avance,\nL’équipe SMOLLAN Morocco\n\nBrouillon de démonstration — vérifiez le destinataire et les références avant envoi.";
+    else if(lower.includes('plan d’action') || lower.includes('tâche')) answer="Plan d’action proposé :\n• BAT Galaxy — responsable projet, échéance aujourd’hui 12 h, dépendance : retour client.\n• Uniformes Ariel — responsable production, échéance aujourd’hui 15 h, dépendance : tailles finales.\n• Pointage sampling — responsable terrain, échéance demain 10 h, dépendance : validation des feuilles de présence.\n\nAucune tâche réelle n’a été créée dans cette maquette.";
+    setMessages(prev=>[...prev,{role:'user',text:value},{role:'assistant',text:answer}]); setInput('');
+  };
+  return <>
+    <div className="page-heading-row"><div><div className="eyebrow"><span className="eyebrow-dot"/> COPILOTE OPÉRATIONNEL</div><h1>Assistant IA<span className="title-period">.</span></h1><p className="page-subtitle">Un copilote pour aider chaque équipe à avancer, préparer et coordonner son travail.</p></div><span className="admin-preview-pill"><Bot size={14}/> IA · mode démo</span></div>
+    <div className="demo-alert"><Bot size={17}/><div><strong>Assistant en mode démonstration</strong><span>Réponses simulées à partir d’exemples. Aucune donnée client réelle n’est consultée et aucune action n’est exécutée.</span></div><span className="demo-pill">PREVIEW</span></div>
+    <div className="ai-workspace">
+      <section className="panel ai-chat-panel">
+        <div className="ai-chat-header"><div className="ai-avatar"><WandSparkles size={20}/></div><div><strong>SMOLLAN Copilot</strong><span><i/> Disponible · démo locale</span></div><button className="icon-button" onClick={()=>setMessages([{role:'assistant',text:"Nouvelle conversation. Que souhaitez-vous préparer ?"}])} aria-label="Nouvelle conversation"><Plus size={17}/></button></div>
+        <div className="ai-context-strip"><span><FolderKanban size={13}/> Portefeuille</span><span><ClipboardCheck size={13}/> Tâches</span><span><CalendarDays size={13}/> Planning</span><span className="ai-context-demo">Données fictives</span></div>
+        <div className="ai-messages">{messages.map((m,i)=><div key={i} className={'ai-message '+m.role}><div className="ai-message-avatar">{m.role==='assistant'?<Bot size={15}/>:<Users size={15}/>}</div><div className="ai-message-body"><span>{m.role==='assistant'?'SMOLLAN Copilot':'Vous'}</span><p>{m.text}</p></div></div>)}</div>
+        <div className="ai-composer"><textarea value={input} onChange={e=>setInput(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send();}}} placeholder="Demandez un plan, un message, une checklist…" rows={2}/><div className="ai-composer-bottom"><span><Paperclip size={13}/> Connecteurs réels à configurer par Super Admin</span><button className="button-primary" onClick={()=>send()} disabled={!input.trim()}>Envoyer <Send size={14}/></button></div></div>
+      </section>
+      <aside className="ai-side-column"><section className="panel ai-suggestions"><div className="panel-header"><div><div className="section-eyebrow">POUR COMMENCER</div><h2>Raccourcis utiles</h2><p>Choisissez une tâche à préparer.</p></div></div><div className="ai-prompt-list">{prompts.map(p=>{const Icon=p.icon;return <button key={p.id} className={'ai-prompt '+(activePrompt===p.id?'selected':'')} onClick={()=>{setActivePrompt(p.id);send(p.prompt);}}><span><Icon size={16}/></span><div><strong>{p.title}</strong><small>{p.prompt}</small></div><ChevronRight size={15}/></button>;})}</div></section><section className="panel ai-capabilities"><div className="section-eyebrow">CAPACITÉS PRÉVUES</div><h3>De la question à l’action</h3><ul><li>Résumer les projets et les points bloquants</li><li>Préparer briefs, e-mails, relances et rapports</li><li>Transformer une demande en tâches assignées</li><li>Déclencher une automation après confirmation</li></ul><div className="security-note"><ShieldCheck size={15}/><span>Actions sensibles soumises aux permissions et à votre confirmation.</span></div></section></aside>
+    </div>
+  </>;
+}
+
+function WhatsAppPage({ acknowledge }) {
+  const [selected, setSelected] = useState('field');
+  const [draft, setDraft] = useState('');
+  const [filter, setFilter] = useState('Tous');
+  const [threads,setThreads]=useState([
+    {id:'field',name:'Équipe terrain · Casablanca',avatar:'ET',color:'green',kind:'Groupe',time:'10:42',unread:3,preview:'Les photos du stand sont envoyées.',messages:[['other','Salma B.','Bonjour, le stand Galaxy est prêt pour le démarrage.'],['other','Yassine M.','Il manque encore deux polos taille M.'],['me','Vous','Merci, vérifiez le stock avant le départ.'],['other','Salma B.','Les photos du stand sont envoyées.']]},
+    {id:'client',name:'Client · Activation Galaxy',avatar:'CG',color:'blue',kind:'Client',time:'09:18',unread:0,preview:'Merci pour le planning mis à jour.',messages:[['other','Client','Pouvez-vous confirmer le planning de samedi ?'],['me','Vous','Je vérifie avec le chef de projet et je reviens vers vous.'],['other','Client','Merci pour le planning mis à jour.']]},
+    {id:'supplier',name:'Fournisseur · Production PLV',avatar:'FP',color:'amber',kind:'Fournisseur',time:'Hier',unread:1,preview:'Le BAT est prêt pour votre retour.',messages:[['other','Production PLV','Le BAT est prêt pour votre retour.'],['other','Production PLV','Nous attendons votre validation pour lancer la production.']]},
+    {id:'hr',name:'Recrutement · Promotrices',avatar:'RH',color:'rose',kind:'Interne',time:'Hier',unread:0,preview:'Formation confirmée pour vendredi.',messages:[['other','Équipe RH','Formation confirmée pour vendredi.']]},
+  ]);
+  const thread=threads.find(t=>t.id===selected)||threads[0];
+  const send=()=>{if(!draft.trim())return;setThreads(prev=>prev.map(t=>t.id===selected?{...t,preview:draft,time:'À l’instant',messages:[...t.messages,['me','Vous',draft]]}:t));setDraft('');acknowledge('Message ajouté à la conversation de démonstration — aucun WhatsApp réel envoyé.');};
+  const visible=threads.filter(t=>(filter==='Tous'||(filter==='Non lus'&&t.unread>0)||t.kind===filter));
+  return <>
+    <div className="page-heading-row"><div><div className="eyebrow"><span className="eyebrow-dot"/> MESSAGERIE & COORDINATION</div><h1>WhatsApp Management<span className="title-period">.</span></h1><p className="page-subtitle">Centralisez les échanges terrain, clients et fournisseurs autour des activations.</p></div><span className="admin-preview-pill"><MessageCircle size={14}/> Canal non connecté</span></div>
+    <div className="demo-alert"><MessageCircle size={17}/><div><strong>Boîte de réception fictive</strong><span>Messages et réponses simulés. La connexion réelle nécessitera WhatsApp Business Platform et un numéro autorisé.</span></div><span className="demo-pill">PREVIEW</span></div>
+    <div className="wa-metrics"><div className="admin-stat"><span>Conversations</span><strong>{threads.length.toString().padStart(2,'0')}</strong><span className="admin-stat-note">dans la démo</span></div><div className="admin-stat"><span>Non lus</span><strong>{threads.reduce((n,t)=>n+t.unread,0).toString().padStart(2,'0')}</strong><span className="admin-stat-note">à traiter</span></div><div className="admin-stat"><span>Automations WhatsApp</span><strong>04</strong><span className="admin-stat-note">scénarios prévus</span></div></div>
+    <div className="wa-layout"><section className="panel wa-inbox"><div className="wa-inbox-head"><strong>Boîte de réception</strong><button className="icon-button" onClick={()=>acknowledge('Synchronisation indisponible : connectez WhatsApp Business dans Super Admin.')} aria-label="Synchroniser"><Activity size={15}/></button></div><div className="wa-filters">{['Tous','Non lus','Groupe','Client','Fournisseur'].map(f=><button key={f} className={filter===f?'selected':''} onClick={()=>setFilter(f)}>{f}</button>)}</div><div className="wa-thread-list">{visible.map(t=><button key={t.id} className={'wa-thread '+(selected===t.id?'selected':'')} onClick={()=>setSelected(t.id)}><span className={'wa-contact-avatar '+t.color}>{t.avatar}</span><span className="wa-thread-copy"><strong>{t.name}</strong><small>{t.preview}</small></span><span className="wa-thread-meta"><small>{t.time}</small>{t.unread>0&&<i>{t.unread}</i>}</span></button>)}</div><div className="wa-connect-hint"><ShieldCheck size={14}/><span>Connexion et permissions à configurer dans Super Admin.</span></div></section>
+    <section className="panel wa-conversation"><div className="wa-conversation-head"><span className={'wa-contact-avatar '+thread.color}>{thread.avatar}</span><div><strong>{thread.name}</strong><span>{thread.kind} · conversation de démonstration</span></div><button className="icon-button" onClick={()=>acknowledge('Fiche contact de démonstration.')} aria-label="Détails"><CircleHelp size={16}/></button></div><div className="wa-message-list">{thread.messages.map((m,i)=><div key={i} className={'wa-bubble-row '+(m[0]==='me'?'mine':'')}><div className="wa-bubble"><small>{m[1]}</small><p>{m[2]}</p><time>{i<2?'09:4'+i:'10:2'+i}</time></div></div>)}</div><div className="wa-reply-box"><textarea rows={2} value={draft} onChange={e=>setDraft(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send();}}} placeholder="Écrire une réponse (démo)…"/><div><span><Paperclip size={13}/> Réponse simulée</span><button className="button-primary" disabled={!draft.trim()} onClick={send}>Envoyer <Send size={14}/></button></div></div></section></div>
+    <div className="wa-bottom-grid"><section className="panel wa-feature-card"><div className="admin-side-icon"><Workflow size={18}/></div><div><strong>Automatiser les échanges répétitifs</strong><p>Rappels de pointage, confirmation de dispatch, collecte de photos, relances de validation et escalades.</p></div><button className="button-secondary" onClick={()=>acknowledge('Ouvrez Automatisations pour préparer les scénarios WhatsApp.')}>Voir les scénarios <ArrowRight size={14}/></button></section><section className="panel wa-feature-card"><div className="admin-side-icon"><Bot size={18}/></div><div><strong>IA assistante de messagerie</strong><p>Résumer les fils, suggérer des réponses et extraire des tâches — après connexion autorisée.</p></div><button className="button-secondary" onClick={()=>acknowledge('Assistant IA disponible en mode démo dans le menu principal.')}>Assistant IA <ArrowRight size={14}/></button></section></div>
+  </>;
+}
+
+function AutomationsPage({ acknowledge }) {
+  const [automations,setAutomations]=useState([
+    {id:1,name:'Rappel de pointage terrain',trigger:'Chaque jour · 09:00',detail:'Rappeler aux équipes de confirmer leur présence.',group:'Terrain',on:true},
+    {id:2,name:'Alerte BAT en attente',trigger:'Si validation > 24 h',detail:'Alerter le chef de projet et proposer une relance.',group:'Production',on:true},
+    {id:3,name:'Checklist avant dispatch',trigger:'À J-1 d’une activation',detail:'Vérifier stock, uniformes, adresses et contacts magasin.',group:'Logistique',on:true},
+    {id:4,name:'Suivi PO et factures',trigger:'Chaque lundi · 10:00',detail:'Lister les PO manquants et les pièces fournisseurs attendues.',group:'Finance',on:false},
+    {id:5,name:'Résumé WhatsApp terrain',trigger:'Chaque jour · 18:00',detail:'Préparer un résumé des incidents et actions à suivre.',group:'WhatsApp',on:false},
+    {id:6,name:'Rapport de clôture activation',trigger:'Après la date de fin',detail:'Assembler présence, photos, KPI et éléments de facturation.',group:'Reporting',on:true},
+  ]);
+  const [filter,setFilter]=useState('Tous');
+  const [showNew,setShowNew]=useState(false);
+  const [name,setName]=useState('');
+  const [trigger,setTrigger]=useState('À la création d’une tâche');
+  const visible=automations.filter(a=>filter==='Tous'||a.group===filter||(filter==='Actives'&&a.on)||(filter==='Inactives'&&!a.on));
+  const toggle=id=>setAutomations(prev=>prev.map(a=>a.id===id?{...a,on:!a.on}:a));
+  const add=()=>{if(!name.trim())return;setAutomations(prev=>[{id:Date.now(),name:name.trim(),trigger,detail:'Nouveau scénario — étapes à configurer.',group:'Personnalisée',on:false},...prev]);setName('');setShowNew(false);acknowledge('Automation ajoutée à la démo. Elle reste inactive tant que ses étapes ne sont pas configurées.');};
+  return <>
+    <div className="page-heading-row"><div><div className="eyebrow"><span className="eyebrow-dot"/> WORKFLOWS & RÈGLES MÉTIER</div><h1>Automatisations<span className="title-period">.</span></h1><p className="page-subtitle">Réduisez les relances manuelles et sécurisez les étapes clés des opérations.</p></div><button className="button-primary" onClick={()=>setShowNew(v=>!v)}><Plus size={15}/> Nouvelle automation</button></div>
+    <div className="demo-alert"><Workflow size={17}/><div><strong>Scénarios en mode démo</strong><span>Les interrupteurs modifient seulement cet écran. Aucun message, e-mail ou workflow réel n’est déclenché.</span></div><span className="demo-pill">PREVIEW</span></div>
+    <div className="automation-summary"><div><span>Scénarios</span><strong>{automations.length.toString().padStart(2,'0')}</strong></div><div><span>Actifs en démo</span><strong>{automations.filter(a=>a.on).length.toString().padStart(2,'0')}</strong></div><div><span>À configurer</span><strong>{automations.filter(a=>!a.on).length.toString().padStart(2,'0')}</strong></div><div><span>Dernière exécution réelle</span><strong>—</strong></div></div>
+    {showNew&&<section className="panel automation-new"><div><strong>Créer un scénario</strong><p>Définissez un nom et un déclencheur de départ.</p></div><div className="automation-new-fields"><input value={name} onChange={e=>setName(e.target.value)} placeholder="Ex. Relance des rapports terrain"/><select value={trigger} onChange={e=>setTrigger(e.target.value)}><option>À la création d’une tâche</option><option>À l’approche d’une échéance</option><option>Après une activation</option><option>À la réception d’un message WhatsApp</option><option>Selon un calendrier</option></select><button className="button-primary" onClick={add} disabled={!name.trim()}>Ajouter</button></div></section>}
+    <div className="automation-toolbar"><div className="filter-tabs">{['Tous','Actives','Inactives','Terrain','Production','Logistique','Finance','WhatsApp','Reporting'].map(f=><button key={f} className={filter===f?'selected':''} onClick={()=>setFilter(f)}>{f}</button>)}</div></div>
+    <div className="automation-grid">{visible.map(a=><section className="panel automation-card" key={a.id}><div className="automation-card-top"><span className="automation-icon"><Workflow size={17}/></span><button className={'admin-toggle '+(a.on?'on':'')} aria-label={(a.on?'Désactiver ':'Activer ')+a.name} onClick={()=>toggle(a.id)}><span/></button></div><span className="automation-category">{a.group}</span><h3>{a.name}</h3><p>{a.detail}</p><div className="automation-trigger"><Clock3 size={13}/><span>{a.trigger}</span></div><div className="automation-card-foot"><span className={'admin-status '+(a.on?'connected':'not-connected')}><i/>{a.on?'Activée en démo':'Inactive'}</span><button className="text-button" onClick={()=>acknowledge('Éditeur d’étapes disponible lorsque le moteur d’automatisation sera connecté.')}>Configurer <ArrowRight size={13}/></button></div></section>)}</div>
+    <section className="panel automation-flow"><div className="panel-header"><div><div className="section-eyebrow">MODÈLE DE WORKFLOW</div><h2>Un workflow, des garde-fous</h2><p>Les automatisations réelles suivront une chaîne vérifiable.</p></div></div><div className="flow-steps"><div><span>01</span><strong>Déclencheur</strong><small>Événement ou horaire</small></div><ArrowRight size={16}/><div><span>02</span><strong>Vérifications</strong><small>Rôle, données et conditions</small></div><ArrowRight size={16}/><div><span>03</span><strong>Action</strong><small>Créer, notifier ou préparer</small></div><ArrowRight size={16}/><div><span>04</span><strong>Journal</strong><small>Trace et résultat</small></div></div></section>
+  </>;
+}
 
 function SuperAdminPage({ acknowledge }) {
   const [tab, setTab] = useState('integrations');
