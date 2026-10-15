@@ -1,8 +1,41 @@
 import React,{useEffect,useState} from 'react';
 import {ArrowUpRight,Box,ClipboardCheck,FileLock2,Gift,Package,Plus,RefreshCw,ShieldCheck,Shirt,Users,Warehouse,X} from 'lucide-react';
 const M={
-'Stores':{eyebrow:'FIELD NETWORK / STORE DIRECTORY',title:'Stores',description:'Imported store master with city, banner and operating hours. Link stores to projects and supervisors through assignments.',entities:[{key:'stores',label:'Store directory',table:'smollan_stores',fields:[['source_code','Source code','text'],['name','Store name','text',1],['city','City','text'],['banner','Retail banner','text'],['format','Store format','text'],['address','Address','text'],['operating_hours','Operating hours / timetable','text'],['status','Status','select',['Active','Inactive'],1]]}]},
-'Supervisors':{eyebrow:'PEOPLE / FIELD MANAGEMENT',title:'Supervisors',description:'Imported supervisor directory with contact details and city. Project-specific links are kept on assignments.',entities:[{key:'supervisors',label:'Supervisor directory',table:'smollan_supervisors',fields:[['full_name','Full name','text',1],['phone','Phone','text'],['email','Email','text'],['city','City','text'],['zone','Zone / region','text'],['status','Status','select',['Active','Inactive','On Leave'],1],['notes','Notes','textarea']}]},
+'Stores':{
+ eyebrow:'FIELD NETWORK / STORE DIRECTORY',
+ title:'Stores',
+ description:'Imported store master with city, banner and operating hours. Link stores to projects and supervisors through assignments.',
+ entities:[{
+  key:'stores',label:'Store directory',table:'smollan_stores',
+  fields:[
+   ['source_code','Source code','text'],
+   ['name','Store name','text',1],
+   ['city','City','text'],
+   ['banner','Retail banner','text'],
+   ['format','Store format','text'],
+   ['address','Address','text'],
+   ['operating_hours','Operating hours / timetable','text'],
+   ['status','Status','select',['Active','Inactive'],1]
+  ]
+ }]
+},
+'Supervisors':{
+ eyebrow:'PEOPLE / FIELD MANAGEMENT',
+ title:'Supervisors',
+ description:'Imported supervisor directory with contact details and city. Project-specific links are kept on assignments.',
+ entities:[{
+  key:'supervisors',label:'Supervisor directory',table:'smollan_supervisors',
+  fields:[
+   ['full_name','Full name','text',1],
+   ['phone','Phone','text'],
+   ['email','Email','text'],
+   ['city','City','text'],
+   ['zone','Zone / region','text'],
+   ['status','Status','select',['Active','Inactive','On Leave'],1],
+   ['notes','Notes','textarea']
+  ]
+ }]
+},
 'Goodies':{eyebrow:'FIELD MATERIALS / GIFT CONTROL',title:'Goodies & gifts',description:'Manage project gift catalogues, store allocations and promoter-level distribution records.',entities:[
 {key:'gifts',label:'Gift catalogue',table:'smollan_gifts',fields:[['project_id','Project','project'],['name','Gift / SKU','text',1],['category','Category','text'],['source','Supplier / source','text'],['total_quantity','Total quantity','number',1],['unit_value','Unit value (MAD)','number'],['status','Status','select',['planned','active','completed','on_hold']],['description','Description','textarea']]},
 {key:'dispatches',label:'Store allocations',table:'smollan_gift_dispatches',fields:[['gift_id','Gift item','gift'],['project_id','Project','project'],['store_id','Store','store'],['allocated_quantity','Allocated quantity','number',1],['dispatch_status','Dispatch status','select',['Planned','Dispatched','Received','Cancelled']],['dispatch_date','Dispatch date','date'],['notes','Notes','textarea']]},
