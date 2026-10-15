@@ -161,7 +161,8 @@ function App(){
   };
   const runImport=()=>{
     const mapped=importRows.map(row=>Object.fromEntries(Object.entries(importMap).filter(([,field])=>field).map(([header,field])=>[field,row[header]])));
-    const mappedFields=Object.values(importMap);\n    const module=mappedFields.includes('cin')?'Promoters':mappedFields.includes('store')?'Stores':mappedFields.includes('date')?'Attendance':mappedFields.includes('category')?'Finance':'Projects';
+    const mappedFields=Object.values(importMap);
+    const module=mappedFields.includes('cin')?'Promoters':mappedFields.includes('store')?'Stores':mappedFields.includes('date')?'Attendance':mappedFields.includes('category')?'Finance':'Projects';
     const required=module==='Promoters'?'cin':module==='Stores'?'code':module==='Attendance'?'date':'code';
     const seen=new Set();let valid=0,invalid=0,duplicates=0;
     const good=[];
