@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import * as XLSX from 'xlsx';
 import { createClient } from '@supabase/supabase-js';
-import { Activity, ArrowRight, ArrowUpRight, Bell, BriefcaseBusiness, CalendarCheck, CalendarDays, Check, CheckCircle2, ChevronDown, ChevronRight, CircleHelp, ClipboardList, Copy, FileQuestion, FileSpreadsheet, Filter, FolderKanban, Gift, LayoutDashboard, Link2, ListTodo, LockKeyhole, LogOut, Menu, MessageCircle, MoreHorizontal, Package, Plus, Search, ShieldCheck, Shirt, Sparkles, Upload, Users, WalletCards, X, Zap } from 'lucide-react';
+import { Activity, ArrowRight, ArrowUpRight, Bell, BriefcaseBusiness, CalendarCheck, CalendarDays, Check, CheckCircle2, ChevronDown, ChevronRight, CircleHelp, ClipboardList, Copy, FileQuestion, FileSpreadsheet, Filter, FolderKanban, FolderOpen, Gift, LayoutDashboard, Link2, ListTodo, LockKeyhole, LogOut, Menu, MessageCircle, MoreHorizontal, Package, Plus, Search, ShieldCheck, Shirt, Sparkles, Upload, Users, WalletCards, X, Zap } from 'lucide-react';
 import './superapp.css';
 import OperationsModules from './OperationsModules.jsx';
 
