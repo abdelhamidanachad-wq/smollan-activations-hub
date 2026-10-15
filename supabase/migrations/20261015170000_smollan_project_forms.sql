@@ -43,3 +43,18 @@ using (
  exists(select 1 from public.smollan_promoters p where p.id=smollan_survey_responses.promoter_id and p.user_id=auth.uid())
  or exists(select 1 from public.smollan_memberships m where m.user_id=auth.uid() and m.is_active and m.role in ('platform_admin','leadership','activation_coordinator','field_operations','supervisor'))
 );
+
+-- Tighten promoter attendance writes to the promoter's own active assignment.
+drop policy if exists "promoters or supervisors create attendance" on public.smollan_attendance;
+create policy "promoters or supervisors create attendance" on public.smollan_attendance for insert to authenticated
+with check (
+  (
+    exists(select 1 from public.smollan_memberships m where m.user_id=auth.uid() and m.is_active and m.role in ('platform_admin','leadership','activation_coordinator','field_operations','supervisor','hr_coordinator'))
+    and exists(select 1 from public.smollan_assignments a where a.id=smollan_attendance.assignment_id and a.promoter_id=smollan_attendance.promoter_id and a.project_id=smollan_attendance.project_id and a.store_id=smollan_attendance.store_id)
+  )
+  or
+  (
+    exists(select 1 from public.smollan_promoters p where p.id=smollan_attendance.promoter_id and p.user_id=auth.uid())
+    and exists(select 1 from public.smollan_assignments a where a.id=smollan_attendance.assignment_id and a.promoter_id=smollan_attendance.promoter_id and a.project_id=smollan_attendance.project_id and a.store_id=smollan_attendance.store_id and a.status='Active')
+  )
+);
