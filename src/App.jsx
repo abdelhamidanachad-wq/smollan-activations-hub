@@ -1,386 +1,292 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
+import * as XLSX from 'xlsx';
 import {
-  Activity, ArrowDownRight, ArrowRight, ArrowUpRight, Bell, CalendarDays,
-  CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, CircleDollarSign,
-  ClipboardCheck, Clock3, Command, FileCheck2, FileText, Filter, FolderKanban,
-  LayoutDashboard, Menu, MoreHorizontal,
-  Package, Plus, Search, Settings2, ShieldCheck, Smartphone,
-  Sparkles, Truck, Users, WalletCards, X, Zap, Building2,
-  HardDrive, CalendarClock, Bot, MessageCircle, Workflow, Send, WandSparkles, Play, Pause, Check, Paperclip, Headphones, CircleHelp
+  Activity, ArrowDownRight, ArrowRight, ArrowUpRight, Bell, CalendarDays, Check,
+  CheckCircle2, ChevronDown, ChevronRight, CircleDollarSign, ClipboardCheck, Clock3,
+  Download, FileCheck2, FileSpreadsheet, FileText, Filter, FolderKanban, LayoutDashboard,
+  Menu, MessageCircle, MoreHorizontal, Package, Plus, Search, Settings2, ShieldCheck,
+  Smartphone, Sparkles, Truck, Users, WalletCards, X, Zap, Building2, Bot, Workflow,
+  Send, WandSparkles, Play, Pause, Paperclip, Headphones, CircleHelp, Store, UserRound,
+  ClipboardList, Gift, Boxes, CalendarClock, Upload, SlidersHorizontal, MapPin, BriefcaseBusiness
 } from 'lucide-react';
 
-const navGroups = [
-  { label: 'PILOTAGE', items: [
-    { id: 'overview', label: 'Vue d’ensemble', icon: LayoutDashboard },
-    { id: 'projects', label: 'Projets', icon: FolderKanban, count: '24' },
-    { id: 'tasks', label: 'Tâches & validations', icon: ClipboardCheck, count: '12' },
-    { id: 'calendar', label: 'Calendrier', icon: CalendarDays },
+const nav = [
+  { label: 'WORKSPACE', items: [
+    ['Overview', LayoutDashboard], ['Projects', FolderKanban], ['Tasks', ClipboardList], ['Calendar', CalendarDays]
   ]},
-  { label: 'OPÉRATIONS', items: [
-    { id: 'people', label: 'Équipes terrain', icon: Users },
-    { id: 'production', label: 'Production & BAT', icon: FileCheck2, count: '5' },
-    { id: 'stock', label: 'PLV, goodies & stock', icon: Package },
-    { id: 'digital', label: 'Jeux digitaux', icon: Zap },
-    { id: 'assistant', label: 'Assistant IA', icon: Bot, count: 'IA' },
-    { id: 'whatsapp', label: 'WhatsApp', icon: MessageCircle, count: '3' },
-    { id: 'automations', label: 'Automatisations', icon: Workflow },
+  { label: 'FIELD OPERATIONS', items: [
+    ['Promoters', Users], ['Supervisors', UserRound], ['Stores', Store], ['Assignments', BriefcaseBusiness], ['Attendance', Clock3], ['Resource Requests', ClipboardCheck]
   ]},
-  { label: 'GESTION', items: [
-    { id: 'finance', label: 'Finance & documents', icon: WalletCards, count: '8' },
-    { id: 'assets', label: 'Parc & assets', icon: Smartphone },
-    { id: 'clients', label: 'Clients & fournisseurs', icon: Building2 },
-    { id: 'integrations', label: 'Workspace & outils', icon: HardDrive },
-    { id: 'superadmin', label: 'Super Admin', icon: ShieldCheck },
+  { label: 'RESOURCES', items: [
+    ['Gifts & Goodies', Gift], ['PLV / POSM', Boxes], ['Clients', Building2]
   ]},
+  { label: 'BUSINESS', items: [
+    ['Finance', WalletCards], ['Excel Import', FileSpreadsheet]
+  ]},
+  { label: 'CONNECTED WORKSPACE', items: [
+    ['AI Assistant', Bot], ['WhatsApp', MessageCircle], ['Automations', Workflow]
+  ]},
+  { label: 'ADMINISTRATION', items: [
+    ['Super Admin', ShieldCheck]
+  ]}
 ];
 
-const projects = [
-  { client: 'Samsung', initials: 'S', color: 'blue', title: 'Galaxy — Roadshow Retail', type: 'Activation', cadence: '3 VSD', owner: 'Salma B.', city: 'Casablanca · Rabat', dates: '17 oct. — 1 nov.', stage: 'En production', progress: 74, risk: 'On track' },
-  { client: "L’Oréal", initials: 'L', color: 'rose', title: 'Beauty Advisor — Permanent', type: 'Promoters permanents', cadence: 'VSD', owner: 'Youssef E.', city: 'National', dates: 'Continu', stage: 'En cours', progress: 86, risk: 'On track' },
-  { client: 'Coca-Cola', initials: 'C', color: 'red', title: 'Sampling — Week-end', type: 'Animation magasin', cadence: '2 VSD', owner: 'Nadia A.', city: 'Marrakech · Agadir', dates: '24 — 25 oct.', stage: 'Recrutement', progress: 46, risk: 'Attention' },
-  { client: 'P&G', initials: 'P', color: 'purple', title: 'Ariel — PLV & uniformes', type: 'Production seule', cadence: 'Livraison', owner: 'Mehdi R.', city: 'Casablanca', dates: '20 oct.', stage: 'BAT à valider', progress: 58, risk: 'Blocked' },
-];
+const seed = {
+  Projects: [
+    {code:'PRJ-2601',name:'SMART — Carrefour Casablanca',client:'Carrefour',type:'Permanent (SMART)',status:'Active',city:'Casablanca',start:'2026-01-01',end:'2026-12-31',budget:480000,stores:18,promoters:34,supervisor:'Youssef Amrani'},
+    {code:'PRJ-2602',name:'Summer Beauty Activation',client:'L’Oréal',type:'Temporary (Activation)',status:'Planning',city:'Rabat',start:'2026-06-01',end:'2026-08-31',budget:185000,stores:12,promoters:24,supervisor:'Salma Idrissi'},
+    {code:'PRJ-2603',name:'Back to School — Marjane',client:'Marjane',type:'Temporary (Activation)',status:'Active',city:'Marrakech',start:'2026-09-01',end:'2026-10-31',budget:265000,stores:9,promoters:18,supervisor:'Hamza El Fassi'},
+    {code:'PRJ-2604',name:'Samsung Experience Zones',client:'Samsung',type:'Permanent (SMART)',status:'On Hold',city:'Tangier',start:'2026-03-01',end:'2026-12-31',budget:320000,stores:8,promoters:16,supervisor:'Nadia Bennis'}
+  ],
+  Promoters: [
+    {cin:'BK123456',name:'Sara El Mansouri',phone:'+212 6 12 34 56 78',email:'sara.demo@example.com',city:'Casablanca',contract:'Permanent',status:'Assigned',uniform:'M',project:'PRJ-2601',pec:'Valid',device:'Tablet',rating:'4.8'},
+    {cin:'CD234567',name:'Omar Benali',phone:'+212 6 22 45 67 89',email:'omar.demo@example.com',city:'Rabat',contract:'Activation',status:'Available',uniform:'L',project:'—',pec:'Pending',device:'Phone',rating:'4.5'},
+    {cin:'EF345678',name:'Imane Alaoui',phone:'+212 6 33 56 78 90',email:'imane.demo@example.com',city:'Marrakech',contract:'Freelance',status:'Assigned',uniform:'S',project:'PRJ-2603',pec:'Valid',device:'Phone',rating:'4.7'},
+    {cin:'GH456789',name:'Mehdi Tazi',phone:'+212 6 44 67 89 01',email:'mehdi.demo@example.com',city:'Tangier',contract:'Permanent',status:'On Leave',uniform:'XL',project:'PRJ-2604',pec:'Expiring',device:'Tablet',rating:'4.3'}
+  ],
+  Supervisors: [
+    {name:'Youssef Amrani',email:'youssef.demo@example.com',phone:'+212 6 11 22 33 44',city:'Casablanca',zone:'Centre',status:'Active',projects:2,stores:14},
+    {name:'Salma Idrissi',email:'salma.demo@example.com',phone:'+212 6 22 33 44 55',city:'Rabat',zone:'Nord-Ouest',status:'Active',projects:1,stores:12},
+    {name:'Hamza El Fassi',email:'hamza.demo@example.com',phone:'+212 6 33 44 55 66',city:'Marrakech',zone:'Sud',status:'Active',projects:1,stores:9}
+  ],
+  Stores: [
+    {code:'CAS-001',name:'Carrefour Sidi Maarouf',city:'Casablanca',banner:'Carrefour',format:'Hypermarket',address:'Sidi Maarouf',status:'Active',projects:'PRJ-2601',supervisor:'Youssef Amrani'},
+    {code:'RBT-004',name:'Marjane Hay Riad',city:'Rabat',banner:'Marjane',format:'Hypermarket',address:'Hay Riad',status:'Active',projects:'PRJ-2602',supervisor:'Salma Idrissi'},
+    {code:'MRK-002',name:'Marjane Menara',city:'Marrakech',banner:'Marjane',format:'Hypermarket',address:'Route de Casablanca',status:'Active',projects:'PRJ-2603',supervisor:'Hamza El Fassi'},
+    {code:'TNG-003',name:'Electroplanet City Center',city:'Tangier',banner:'Electroplanet',format:'Electronics',address:'City Center',status:'Inactive',projects:'PRJ-2604',supervisor:'Nadia Bennis'}
+  ],
+  Assignments: [
+    {id:'ASN-1001',promoter:'Sara El Mansouri',cin:'BK123456',project:'PRJ-2601',store:'CAS-001',supervisor:'Youssef Amrani',start:'2026-01-01',end:'2026-12-31',status:'Active'},
+    {id:'ASN-1002',promoter:'Imane Alaoui',cin:'EF345678',project:'PRJ-2603',store:'MRK-002',supervisor:'Hamza El Fassi',start:'2026-09-01',end:'2026-10-31',status:'Active'},
+    {id:'ASN-1003',promoter:'Mehdi Tazi',cin:'GH456789',project:'PRJ-2604',store:'TNG-003',supervisor:'Nadia Bennis',start:'2026-03-01',end:'2026-12-31',status:'Completed'}
+  ],
+  Attendance: [
+    {date:'2026-10-15',promoter:'Sara El Mansouri',project:'PRJ-2601',store:'CAS-001',checkin:'08:57',checkout:'17:02',status:'Present',source:'Supervisor App',validation:'Validated'},
+    {date:'2026-10-15',promoter:'Imane Alaoui',project:'PRJ-2603',store:'MRK-002',checkin:'09:18',checkout:'—',status:'Late',source:'Portal',validation:'Pending'},
+    {date:'2026-10-15',promoter:'Omar Benali',project:'PRJ-2602',store:'RBT-004',checkin:'—',checkout:'—',status:'Absent',source:'Manual',validation:'Pending'}
+  ],
+  'Resource Requests': [
+    {id:'REQ-0201',type:'PEC',promoter:'Omar Benali',project:'PRJ-2602',store:'RBT-004',requester:'Salma Idrissi',date:'2026-10-14',status:'Pending',decision:'Awaiting coordinator'},
+    {id:'REQ-0202',type:'Tablet',promoter:'Sara El Mansouri',project:'PRJ-2601',store:'CAS-001',requester:'Youssef Amrani',date:'2026-10-12',status:'Approved',decision:'Approved by coordinator'},
+    {id:'REQ-0203',type:'Uniform',promoter:'Imane Alaoui',project:'PRJ-2603',store:'MRK-002',requester:'Hamza El Fassi',date:'2026-10-11',status:'Rejected',decision:'Incorrect size — resubmit'}
+  ],
+  'Gifts & Goodies': [
+    {name:'L’Oréal Sample Kit',category:'Samples',project:'PRJ-2602',total:1200,allocated:900,distributed:642,unitValue:38,status:'In progress'},
+    {name:'School Starter Pack',category:'Gift pack',project:'PRJ-2603',total:800,allocated:600,distributed:418,unitValue:65,status:'In progress'},
+    {name:'Samsung Tote Bag',category:'Merchandise',project:'PRJ-2604',total:500,allocated:250,distributed:201,unitValue:22,status:'On hold'}
+  ],
+  'PLV / POSM': [
+    {name:'Beauty Counter Display',type:'Display',project:'PRJ-2602',quantity:24,unitCost:2200,production:'In production',deadline:'2026-10-24',installed:12,status:'In progress'},
+    {name:'Back to School Endcap',type:'Endcap',project:'PRJ-2603',quantity:18,unitCost:1850,production:'Ready to dispatch',deadline:'2026-10-18',installed:7,status:'In progress'},
+    {name:'Samsung Demo Stand',type:'Demo stand',project:'PRJ-2604',quantity:8,unitCost:7800,production:'On hold',deadline:'2026-11-01',installed:2,status:'On hold'}
+  ],
+  Tasks: [
+    {title:'Validate attendance for 15 Oct',project:'PRJ-2601',assignee:'Youssef Amrani',priority:'High',due:'2026-10-16',status:'In Progress'},
+    {title:'Approve PEC request for Omar',project:'PRJ-2602',assignee:'Coordinator',priority:'Urgent',due:'2026-10-16',status:'To Do'},
+    {title:'Confirm POSM delivery window',project:'PRJ-2603',assignee:'Hamza El Fassi',priority:'Medium',due:'2026-10-17',status:'To Do'},
+    {title:'Reconcile gift stock count',project:'PRJ-2604',assignee:'Finance',priority:'Low',due:'2026-10-20',status:'Done'}
+  ],
+  Finance: [
+    {project:'PRJ-2601',category:'Promoter payroll',budget:210000,actual:178500,funding:'Client',status:'On track'},
+    {project:'PRJ-2602',category:'Production & POSM',budget:65000,actual:28400,funding:'Client',status:'On track'},
+    {project:'PRJ-2603',category:'Gifts & goodies',budget:52000,actual:59700,funding:'Client',status:'Over budget'},
+    {project:'PRJ-2604',category:'Activation operations',budget:85000,actual:42600,funding:'Client',status:'On track'}
+  ],
+  Clients: [
+    {name:'Carrefour',industry:'Retail',contact:'Demo contact',email:'client.demo@example.com',phone:'—',status:'Active',projects:1},
+    {name:'L’Oréal',industry:'Beauty & FMCG',contact:'Demo contact',email:'client.demo@example.com',phone:'—',status:'Active',projects:1},
+    {name:'Marjane',industry:'Retail',contact:'Demo contact',email:'client.demo@example.com',phone:'—',status:'Active',projects:1},
+    {name:'Samsung',industry:'Electronics',contact:'Demo contact',email:'client.demo@example.com',phone:'—',status:'On Hold',projects:1}
+  ]
+};
 
-const tasksInitial = [
-  { id: 1, title: 'Valider le BAT stand Galaxy', project: 'Samsung · Galaxy Roadshow', owner: 'Salma B.', due: 'Aujourd’hui · 12:00', state: 'Urgent', kind: 'BAT' },
-  { id: 2, title: 'Confirmer les tailles uniformes', project: 'P&G · Ariel PLV', owner: 'Mehdi R.', due: 'Aujourd’hui · 15:00', state: 'À faire', kind: 'Production' },
-  { id: 3, title: 'Clôturer le pointage SD', project: 'Coca-Cola · Sampling', owner: 'Nadia A.', due: 'Demain · 10:00', state: 'En cours', kind: 'Terrain' },
-  { id: 4, title: 'Envoyer le devis révisé', project: 'L’Oréal · Beauty Advisor', owner: 'Youssef E.', due: 'Demain · 16:00', state: 'En attente', kind: 'Finance' },
-];
+const roles = ['Admin','Coordinator','Field Manager','Supervisor','HR Coordinator','Finance','Promoter'];
+const money = n => new Intl.NumberFormat('fr-MA',{style:'currency',currency:'MAD',maximumFractionDigits:0}).format(n||0);
+const Status = ({value}) => <span className={'status status-'+String(value||'').toLowerCase().replace(/[^a-z]+/g,'-')}>{value}</span>;
+const initials = name => String(name||'SM').split(' ').map(x=>x[0]).slice(0,2).join('').toUpperCase();
 
-const attentionItems = [
-  { title: 'BAT en attente de validation', subtitle: 'P&G · Ariel — PLV & uniformes', tag: '2 jours', icon: FileCheck2, tone: 'amber' },
-  { title: 'PO client manquant', subtitle: 'Coca-Cola · Sampling Week-end', tag: 'À relancer', icon: FileText, tone: 'rose' },
-  { title: 'Dispatch à confirmer', subtitle: 'Samsung · 4 magasins', tag: 'Demain', icon: Truck, tone: 'blue' },
-];
+function App(){
+  const [active,setActive]=useState('Overview');
+  const [data,setData]=useState(seed);
+  const [role,setRole]=useState('Admin');
+  const [query,setQuery]=useState('');
+  const [modal,setModal]=useState(null);
+  const [selectedProject,setSelectedProject]=useState(null);
+  const [mobileOpen,setMobileOpen]=useState(false);
+  const [toast,setToast]=useState('');
+  const [importRows,setImportRows]=useState([]);
+  const [importHeaders,setImportHeaders]=useState([]);
+  const [importSheet,setImportSheet]=useState('');
+  const [importMap,setImportMap]=useState({});
+  const [importMode,setImportMode]=useState('create-only');
+  const [importResult,setImportResult]=useState(null);
+  const [assistantInput,setAssistantInput]=useState('');
+  const [assistantMessages,setAssistantMessages]=useState([{from:'assistant',text:'Bonjour ! I can help you plan today’s field operations, review project risks, or prepare a client follow-up. This is a demo assistant; no external AI provider is connected.'}]);
+  const [waText,setWaText]=useState('');
+  const [waConversation,setWaConversation]=useState('field');
+  const [waMessages,setWaMessages]=useState([{from:'them',text:'Morning team — store setup is complete at CAS-001.'},{from:'me',text:'Thanks. Please upload the opening photo when ready.'}]);
+  const fileRef=useRef(null);
 
-function App() {
-  const [active, setActive] = useState('overview');
-  const [search, setSearch] = useState('');
-  const [filter, setFilter] = useState('Tous');
-  const [tasks, setTasks] = useState(tasksInitial);
-  const [notice, setNotice] = useState('');
-  const [showCreate, setShowCreate] = useState(false);
-  const [createTitle, setCreateTitle] = useState('');
-  const [mobileNav, setMobileNav] = useState(false);
-  const [lang, setLang] = useState('FR');
+  const visibleNav=useMemo(()=>nav.map(g=>({...g,items:g.items.filter(([name])=>{
+    if(role==='Promoter') return ['Promoter Portal'].includes(name);
+    if(role==='Finance') return ['Overview','Projects','Tasks','Finance','Clients','Super Admin'].includes(name);
+    if(role==='HR Coordinator') return ['Overview','Promoters','Attendance','Resource Requests','Tasks'].includes(name);
+    if(role==='Supervisor') return ['Overview','Projects','Promoters','Stores','Assignments','Attendance','Resource Requests','Tasks','Gifts & Goodies','PLV / POSM'].includes(name);
+    return true;
+  })})).filter(g=>g.items.length),[role]);
 
-  const selected = navGroups.flatMap(g => g.items).find(i => i.id === active);
-  const filteredProjects = useMemo(() => projects.filter(p => {
-    const matchesText = [p.client, p.title, p.type, p.owner, p.city].join(' ').toLowerCase().includes(search.toLowerCase());
-    const matchesStage = filter === 'Tous' || p.stage === filter || p.type === filter;
-    return matchesText && matchesStage;
-  }), [search, filter]);
+  const showToast = msg => {setToast(msg); setTimeout(()=>setToast(''),2800);};
+  const currentRows = data[active] || [];
+  const filteredRows = currentRows.filter(row=>Object.values(row).some(v=>String(v??'').toLowerCase().includes(query.toLowerCase())));
+  const totalBudget = data.Projects.reduce((a,p)=>a+p.budget,0);
+  const activeProjects = data.Projects.filter(p=>p.status==='Active').length;
+  const pendingRequests = data['Resource Requests'].filter(r=>r.status==='Pending').length;
+  const pendingAttendance = data.Attendance.filter(a=>a.validation==='Pending').length;
 
-  const acknowledge = msg => {
-    setNotice(msg);
-    window.setTimeout(() => setNotice(''), 3200);
+  const updateRow=(module,index,patch)=>setData(prev=>({...prev,[module]:prev[module].map((r,i)=>i===index?{...r,...patch}:r)}));
+  const addRow=(module,row)=>{setData(prev=>({...prev,[module]:[row,...(prev[module]||[])]}));setModal(null);showToast('Record added to this demo session');};
+  const handleFile=async file=>{
+    if(!file)return;
+    try{
+      const buffer=await file.arrayBuffer();
+      const wb=XLSX.read(buffer,{type:'array',cellDates:true});
+      const sheet=wb.SheetNames[0];
+      const rows=XLSX.utils.sheet_to_json(wb.Sheets[sheet],{defval:'',raw:false});
+      const headers=rows.length?Object.keys(rows[0]):(wb.Sheets[sheet]?Object.keys(XLSX.utils.sheet_to_json(wb.Sheets[sheet],{header:1})[0]||[]):[]);
+      setImportSheet(sheet);setImportRows(rows);setImportHeaders(headers);
+      const fields=['code','name','client','type','status','city','start','end','budget','cin','phone','email','contract','uniform','project','store','supervisor','date','checkin','checkout','category','quantity','amount'];
+      const map={};headers.forEach(h=>{const key=h.toLowerCase().replace(/[^a-z]/g,'');const match=fields.find(f=>key===f||key.includes(f));if(match)map[h]=match;});
+      setImportMap(map);setImportResult(null);showToast('Worksheet loaded for preview');
+    }catch(e){showToast('Could not read this workbook. Please check the file format.');}
+  };
+  const runImport=()=>{
+    const mapped=importRows.map(row=>Object.fromEntries(Object.entries(importMap).filter(([,field])=>field).map(([header,field])=>[field,row[header]])));
+    const module=importMap.cin?'Promoters':importMap.store?'Stores':importMap.category?'Finance':importMap.date?'Attendance':'Projects';
+    const required=module==='Promoters'?'cin':module==='Stores'?'code':module==='Attendance'?'date':'code';
+    const seen=new Set();let valid=0,invalid=0,duplicates=0;
+    const good=[];
+    mapped.forEach((row,i)=>{const key=String(row[required]||'').trim().toLowerCase();if(!key){invalid++;return;}if(seen.has(key)){duplicates++;return;}seen.add(key);valid++;good.push({...row,_sourceRow:i+2});});
+    if(importMode==='create-only'){
+      const existing=new Set((data[module]||[]).map(r=>String(r[required]||'').toLowerCase()));
+      const fresh=good.filter(r=>!existing.has(String(r[required]).toLowerCase()));
+      duplicates+=good.length-fresh.length;
+      setImportResult({module,valid:fresh.length,invalid,duplicates,rows:fresh});
+    }else setImportResult({module,valid,invalid,duplicates,rows:good});
+  };
+  const confirmImport=()=>{
+    if(!importResult?.rows?.length)return;
+    const rows=importResult.rows.map(r=>{const out={...r};delete out._sourceRow;return out;});
+    setData(prev=>({...prev,[importResult.module]:[...rows,...(prev[importResult.module]||[])]}));
+    showToast(importResult.rows.length+' rows added to demo session');
+    setImportResult({...importResult,done:true});
+  };
+  const sendAssistant=()=>{
+    if(!assistantInput.trim())return;
+    const prompt=assistantInput.trim();
+    const answer=/attendance|absence|présence/i.test(prompt)?'Suggested next steps: review the pending attendance validations, compare today’s check-ins against active assignments, then route ambiguous records to the field manager. No records have been changed.':/budget|finance|cost/i.test(prompt)?'Start with PRJ-2603: its illustrative actuals exceed the category budget. Confirm the source records and approvals before treating this as a financial exception.':/project|priorit|today/i.test(prompt)?'Suggested priorities: (1) resolve pending resource requests, (2) validate attendance, (3) confirm the POSM delivery deadline, and (4) review gift distribution variances. These are suggestions based on sample data.':'I can help structure that task. Tell me the project, owner, deadline and desired outcome, and I’ll draft a checklist. This demo does not call a live AI model.';
+    setAssistantMessages(prev=>[...prev,{from:'user',text:prompt},{from:'assistant',text:answer}]);setAssistantInput('');
   };
 
-  const markDone = id => {
-    setTasks(prev => prev.filter(t => t.id !== id));
-    acknowledge('Tâche marquée comme terminée dans cette démo.');
+  const renderOverview=()=> <div className="page-content">
+    <div className="welcome-row"><div><div className="eyebrow">THURSDAY, 15 OCTOBER 2026</div><h1>Good morning, team <span>✳</span></h1><p className="subheading">Here’s the operational picture across your projects today.</p></div><button className="btn primary" onClick={()=>setModal({type:'create',module:'Projects'})}><Plus size={16}/> New project</button></div>
+    <div className="metric-grid">
+      <Metric icon={FolderKanban} label="Active projects" value={activeProjects} note="Across current activations" trend="+2 this month" />
+      <Metric icon={Users} label="Assigned promoters" value={data.Promoters.filter(p=>p.status==='Assigned').length} note="In illustrative sample data" trend="Field coverage" />
+      <Metric icon={Clock3} label="Attendance to review" value={pendingAttendance} note="Records awaiting validation" trend="Needs attention" warn />
+      <Metric icon={ClipboardCheck} label="Pending requests" value={pendingRequests} note="Coordinator decisions needed" trend="Open approvals" />
+    </div>
+    <div className="dashboard-grid">
+      <section className="panel project-panel"><div className="panel-head"><div><h2>Project portfolio</h2><p>Track status, coverage and budget</p></div><button className="text-action" onClick={()=>setActive('Projects')}>View all <ArrowRight size={15}/></button></div>
+        <div className="project-list">{data.Projects.slice(0,4).map(p=><button className="project-row" key={p.code} onClick={()=>setSelectedProject(p)}><div className="project-mark">{p.client.slice(0,1)}</div><div className="project-info"><strong>{p.name}</strong><span>{p.client} · {p.city} · {p.promoters} promoters</span><div className="progress"><i style={{width:(p.status==='Active'?'72%':p.status==='Planning'?'28%':p.status==='On Hold'?'42%':'100%')}}/></div></div><div className="project-meta"><Status value={p.status}/><b>{money(p.budget)}</b></div><ChevronRight size={16} className="row-chevron"/></button>)}</div>
+      </section>
+      <section className="panel attention-panel"><div className="panel-head"><div><h2>Needs your attention</h2><p>Items requiring a decision</p></div><span className="count-badge">{pendingRequests+pendingAttendance}</span></div>
+        <div className="attention-list"><button onClick={()=>setActive('Resource Requests')} className="attention-item"><span className="attention-icon amber"><ClipboardCheck size={18}/></span><span><strong>{pendingRequests} resource request pending</strong><small>Coordinator review required</small></span><ChevronRight size={16}/></button><button onClick={()=>setActive('Attendance')} className="attention-item"><span className="attention-icon blue"><Clock3 size={18}/></span><span><strong>{pendingAttendance} attendance records</strong><small>Validation pending for today</small></span><ChevronRight size={16}/></button><button onClick={()=>setActive('Finance')} className="attention-item"><span className="attention-icon rose"><CircleDollarSign size={18}/></span><span><strong>Budget variance to review</strong><small>PRJ-2603 sample actuals over plan</small></span><ChevronRight size={16}/></button></div>
+      </section>
+      <section className="panel"><div className="panel-head"><div><h2>Today in the field</h2><p>Attendance snapshot · sample records</p></div><button className="icon-button" onClick={()=>setActive('Attendance')}><ArrowRight size={16}/></button></div><div className="attendance-summary"><div><span className="summary-number">{data.Attendance.filter(a=>a.status==='Present').length}</span><span>Present</span></div><div><span className="summary-number">{data.Attendance.filter(a=>a.status==='Late').length}</span><span>Late</span></div><div><span className="summary-number">{data.Attendance.filter(a=>a.status==='Absent').length}</span><span>Absent</span></div></div><div className="mini-list">{data.Attendance.slice(0,3).map((a,i)=><div className="mini-row" key={i}><Avatar name={a.promoter}/><span><strong>{a.promoter}</strong><small>{a.store} · {a.checkin}</small></span><Status value={a.status}/></div>)}</div></section>
+      <section className="panel"><div className="panel-head"><div><h2>Upcoming tasks</h2><p>Next operational deadlines</p></div><button className="text-action" onClick={()=>setActive('Tasks')}>View tasks <ArrowRight size={15}/></button></div><div className="task-list">{data.Tasks.filter(t=>t.status!=='Done').slice(0,4).map((t,i)=><div className="task-row" key={i}><button className={'task-check '+(t.status==='Done'?'checked':'')} onClick={()=>updateRow('Tasks',data.Tasks.indexOf(t),{status:t.status==='Done'?'To Do':'Done'})}>{t.status==='Done'&&<Check size={13}/>}</button><div className="task-copy"><strong>{t.title}</strong><small>{t.project} · Due {t.due}</small></div><Status value={t.priority}/></div>)}</div></section>
+    </div>
+    <div className="footnote"><ShieldCheck size={15}/> Demo workspace · All names, metrics and records shown here are illustrative. Changes stay in this browser session.</div>
+  </div>;
+
+  const columns={
+    Projects:[['code','Project ID'],['name','Project'],['client','Client'],['type','Type'],['city','City'],['status','Status'],['budget','Budget']],
+    Promoters:[['cin','CIN'],['name','Promoter'],['phone','Phone'],['city','City'],['contract','Contract'],['project','Project'],['status','Status'],['pec','PEC']],
+    Supervisors:[['name','Supervisor'],['email','Email'],['phone','Phone'],['city','City'],['zone','Zone'],['projects','Projects'],['status','Status']],
+    Stores:[['code','Store code'],['name','Store'],['city','City'],['banner','Banner'],['format','Format'],['supervisor','Supervisor'],['status','Status']],
+    Assignments:[['id','Assignment'],['promoter','Promoter'],['project','Project'],['store','Store'],['supervisor','Supervisor'],['start','Start date'],['end','End date'],['status','Status']],
+    Attendance:[['date','Date'],['promoter','Promoter'],['project','Project'],['store','Store'],['checkin','Check-in'],['checkout','Check-out'],['status','Status'],['validation','Validation']],
+    'Resource Requests':[['id','Request'],['type','Type'],['promoter','Promoter'],['project','Project'],['store','Store'],['requester','Requested by'],['date','Date'],['status','Status'],['decision','Decision']],
+    'Gifts & Goodies':[['name','Item'],['category','Category'],['project','Project'],['total','Total qty'],['allocated','Allocated'],['distributed','Distributed'],['unitValue','Unit value'],['status','Status']],
+    'PLV / POSM':[['name','Material'],['type','Type'],['project','Project'],['quantity','Qty'],['production','Production'],['deadline','Deadline'],['installed','Installed'],['status','Status']],
+    Tasks:[['title','Task'],['project','Project'],['assignee','Assignee'],['priority','Priority'],['due','Due date'],['status','Status']],
+    Finance:[['project','Project'],['category','Category'],['budget','Budget'],['actual','Actual'],['funding','Funding source'],['status','Status']],
+    Clients:[['name','Client'],['industry','Industry'],['contact','Contact'],['email','Email'],['phone','Phone'],['projects','Projects'],['status','Status']]
+  };
+  const formatCell=(key,value)=>key==='budget'||key==='actual'||key==='unitValue'?money(value):key==='total'||key==='allocated'||key==='distributed'||key==='quantity'||key==='installed'?Number(value||0).toLocaleString('fr-MA'):key==='status'||key==='validation'||key==='priority'||key==='pec'?<Status value={value}/>:value??'—';
+  const renderTable=module=>{
+    const cols=columns[module]||[];
+    return <div className="page-content"><div className="page-heading"><div><div className="eyebrow">OPERATIONS / {module.toUpperCase()}</div><h1>{module}</h1><p className="subheading">{module==='Projects'?'Your project-centric operational portfolio.':module==='Promoters'?'Promoter profiles, contracts, status and project links.':module==='Attendance'?'Daily attendance records and validation queue.':module==='Finance'?'Budget versus actuals by project and cost category.':'Manage records and navigate related operational data.'}</p></div><div className="heading-actions"><button className="btn secondary" onClick={()=>setQuery('')}><Filter size={15}/> Reset filters</button><button className="btn primary" onClick={()=>setModal({type:'create',module})}><Plus size={16}/> Add {module==='Projects'?'project':module==='Promoters'?'promoter':'record'}</button></div></div>
+      {module==='Projects'&&<div className="metric-grid compact"><Metric icon={FolderKanban} label="Total projects" value={data.Projects.length} note="Across all statuses"/><Metric icon={Activity} label="Active" value={data.Projects.filter(p=>p.status==='Active').length} note="Currently running"/><Metric icon={CircleDollarSign} label="Portfolio budget" value={money(totalBudget)} note="Illustrative MAD budget"/><Metric icon={Users} label="Promoter capacity" value={data.Projects.reduce((a,p)=>a+p.promoters,0)} note="Planned assignments"/></div>}
+      <div className="panel table-panel"><div className="table-toolbar"><div className="searchbox"><Search size={16}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder={'Search '+module.toLowerCase()+'…'}/>{query&&<button onClick={()=>setQuery('')}><X size={14}/></button>}</div><div className="toolbar-right"><span>{filteredRows.length} records</span><button className="icon-button" onClick={()=>showToast('Export is available after selecting a format in a future integration.')}><Download size={16}/></button><button className="icon-button" onClick={()=>setModal({type:'create',module})}><Plus size={16}/></button></div></div>
+      <div className="table-scroll"><table><thead><tr>{cols.map(([key,label])=><th key={key}>{label}</th>)}<th></th></tr></thead><tbody>{filteredRows.map((row,i)=><tr key={i} onClick={()=>module==='Projects'&&setSelectedProject(row)} className={module==='Projects'?'clickable':''}>{cols.map(([key])=><td key={key}>{formatCell(key,key==='budget'||key==='actual'||key==='unitValue'?row[key]:row[key])}</td>)}<td><button className="icon-button row-menu" onClick={e=>{e.stopPropagation();setModal({type:'edit',module,row,index:data[module].indexOf(row)});}}><MoreHorizontal size={17}/></button></td></tr>)}</tbody></table></div>
+      {filteredRows.length===0&&<div className="empty-state"><Search size={26}/><strong>No matching records</strong><span>Try a different search or add a record.</span></div>}</div><div className="footnote"><ShieldCheck size={15}/> Sample data only · Record changes are local to this demo session until live persistence is implemented.</div></div>;
   };
 
-  const addTask = e => {
-    e.preventDefault();
-    if (!createTitle.trim()) return;
-    setTasks(prev => [{ id: Date.now(), title: createTitle.trim(), project: 'Interne · À affecter', owner: 'Vous', due: 'À planifier', state: 'À faire', kind: 'Interne' }, ...prev]);
-    setCreateTitle('');
-    setShowCreate(false);
-    setActive('tasks');
-    acknowledge('Tâche ajoutée à la démonstration.');
+  const renderImport=()=> <div className="page-content"><div className="page-heading"><div><div className="eyebrow">DATA MANAGEMENT</div><h1>Excel workbook import</h1><p className="subheading">Preview, map and validate worksheet data before adding records.</p></div></div><div className="import-layout"><section className="panel import-main"><div className="panel-head"><div><h2>1. Upload workbook</h2><p>Excel .xlsx/.xls or CSV · source identifiers are preserved</p></div><FileSpreadsheet size={20}/></div><div className="upload-zone" onClick={()=>fileRef.current?.click()}><input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" hidden onChange={e=>handleFile(e.target.files?.[0])}/><span className="upload-icon"><Upload size={23}/></span><strong>Choose a workbook to preview</strong><span>Click to select a file from your computer</span><button className="btn secondary"><Upload size={15}/> Select file</button></div>
+      {importHeaders.length>0&&<><div className="import-section-head"><div><h3>2. Map columns</h3><p>Worksheet: <b>{importSheet}</b> · {importRows.length} data rows</p></div><select value={importMode} onChange={e=>setImportMode(e.target.value)}><option value="create-only">Create only — don't overwrite</option><option value="review-updates">Review mapped rows</option></select></div><div className="mapping-list">{importHeaders.map(h=><div className="mapping-row" key={h}><span title={h}>{h}</span><ArrowRight size={15}/><select value={importMap[h]||''} onChange={e=>setImportMap(prev=>({...prev,[h]:e.target.value}))}><option value="">Unmapped — ignore</option>{['code','name','client','type','status','city','start','end','budget','cin','phone','email','contract','uniform','project','store','supervisor','date','checkin','checkout','category','quantity','amount'].map(f=><option key={f} value={f}>{f}</option>)}</select></div>)}</div><div className="import-section-head"><div><h3>3. Preview and validate</h3><p>Required keys depend on the target entity. Ambiguous relationships need manual resolution.</p></div><button className="btn primary" onClick={runImport}><ClipboardCheck size={15}/> Validate preview</button></div><div className="table-scroll preview-table"><table><thead><tr>{importHeaders.slice(0,6).map(h=><th key={h}>{h}</th>)}</tr></thead><tbody>{importRows.slice(0,5).map((r,i)=><tr key={i}>{importHeaders.slice(0,6).map(h=><td key={h}>{String(r[h]??'')}</td>)}</tr>)}</tbody></table></div></>}
+      {importResult&&!importResult.done&&<div className="validation-result"><h3>Validation summary · {importResult.module}</h3><div className="validation-stats"><div><b>{importResult.valid}</b><span>Rows ready</span></div><div><b>{importResult.invalid}</b><span>Missing key</span></div><div><b>{importResult.duplicates}</b><span>Duplicate/existing</span></div></div><p>Import only adds rows to the local demo session. No Supabase records are written by this preview.</p><button className="btn primary" disabled={!importResult.valid} onClick={confirmImport}><Check size={15}/> Confirm demo import</button></div>}
+      {importResult?.done&&<div className="success-banner"><CheckCircle2 size={18}/> Added {importResult.valid} rows to this demo session. Nothing was written to Supabase.</div>}
+    </section><aside className="panel import-guidance"><h2>Import safeguards</h2>{[['Preserve source IDs','Keep CIN, store codes and project codes as supplied.'],['Preview before write','See sample rows and map every column deliberately.'],['No silent overwrites','Create-only mode skips keys already present.'],['Resolve ambiguity','Do not infer a project/store/person match from names alone.'],['Reconcile results','Production import must return row-level success and error reports.']].map(([t,d])=><div className="guidance-row" key={t}><CheckCircle2 size={17}/><div><strong>{t}</strong><p>{d}</p></div></div>)}<div className="notice"><ShieldCheck size={17}/><span>Current import writes to temporary UI state only. A production importer needs authenticated server-side writes, transaction handling and audit events.</span></div></aside></div></div>;
+
+  const renderAssistant=()=> <div className="page-content"><div className="page-heading"><div><div className="eyebrow">CONNECTED WORKSPACE</div><h1>AI Assistant</h1><p className="subheading">Operational copilot for planning, field coordination and follow-ups.</p></div><span className="demo-pill"><Sparkles size={14}/> Demo mode</span></div><div className="assistant-layout"><div className="assistant-main panel"><div className="assistant-top"><span className="assistant-avatar"><Bot size={21}/></span><div><strong>Smollan Copilot</strong><small>Operational support · no live AI provider connected</small></div><span className="online-dot"/> </div><div className="chat-messages">{assistantMessages.map((m,i)=><div className={'chat-message '+m.from} key={i}><div className="chat-avatar">{m.from==='assistant'?<Sparkles size={15}/>:<UserRound size={15}/>}</div><div className="chat-bubble">{m.text}</div></div>)}</div><div className="prompt-chips">{['Summarize today’s priorities','Review attendance risks','Draft client follow-up'].map(p=><button key={p} onClick={()=>{setAssistantInput(p);}}>{p}</button>)}</div><form className="chat-compose" onSubmit={e=>{e.preventDefault();sendAssistant();}}><input value={assistantInput} onChange={e=>setAssistantInput(e.target.value)} placeholder="Ask about projects, field operations, or next steps…"/><button className="btn primary" type="submit"><Send size={15}/> Send</button></form></div><aside className="panel assistant-side"><h3>What I can help with</h3>{[['Daily priorities','Turn operational status into a clear action list.'],['Field checklist','Draft store visit and activation checklists.'],['Client follow-up','Prepare a message for human review.'],['Task planning','Break a goal into owners and deadlines.']].map(([t,d])=><div className="capability" key={t}><span><WandSparkles size={16}/></span><div><strong>{t}</strong><p>{d}</p></div></div>)}<div className="notice"><ShieldCheck size={17}/><span>Do not paste CINs, bank details, identity documents or other sensitive personal information.</span></div></aside></div></div>;
+
+  const renderWhatsApp=()=> <div className="page-content"><div className="page-heading"><div><div className="eyebrow">CONNECTED WORKSPACE</div><h1>WhatsApp workspace</h1><p className="subheading">Conversation triage for field teams, clients and suppliers.</p></div><span className="demo-pill"><MessageCircle size={14}/> Local demo inbox</span></div><div className="whatsapp-layout panel"><div className="conversation-list"><div className="conversation-search"><Search size={15}/><input placeholder="Search conversations"/></div>{[['field','Field operations','CAS-001 setup is complete','09:42'],['client','Client — L’Oréal','Can you confirm delivery timing?','09:18'],['supplier','POSM supplier','Dispatch planned for Friday','Yesterday'],['hr','HR coordination','PEC documents ready for review','Yesterday']].map(([id,name,last,time])=><button className={'conversation-item '+(waConversation===id?'selected':'')} key={id} onClick={()=>{setWaConversation(id);setWaMessages([{from:'them',text:last},{from:'me',text:'Thanks — we will review and confirm shortly.'}];}}><Avatar name={name}/><span><strong>{name}</strong><small>{last}</small></span><time>{time}</time></button>)}</div><div className="conversation-thread"><div className="thread-header"><Avatar name={waConversation==='field'?'Field operations':waConversation==='client'?'L’Oréal':waConversation==='supplier'?'POSM supplier':'HR coordination'}/><div><strong>{waConversation==='field'?'Field operations':waConversation==='client'?'Client — L’Oréal':waConversation==='supplier'?'POSM supplier':'HR coordination'}</strong><small>Mock conversation · not connected to WhatsApp Business</small></div><button className="icon-button"><MoreHorizontal size={18}/></button></div><div className="thread-messages">{waMessages.map((m,i)=><div className={'wa-bubble '+m.from} key={i}>{m.text}<small>Demo · {m.from==='me'?'You':'Contact'}</small></div>)}</div><form className="wa-compose" onSubmit={e=>{e.preventDefault();if(waText.trim()){setWaMessages(p=>[...p,{from:'me',text:waText.trim()}]);setWaText('');showToast('Added to local demo thread — not sent');}}}><button type="button" className="icon-button"><Paperclip size={17}/></button><input value={waText} onChange={e=>setWaText(e.target.value)} placeholder="Write a demo message…"/><button className="btn primary" type="submit"><Send size={15}/></button></form><div className="thread-warning">Demo only — messages are not sent to WhatsApp.</div></div></div></div>;
+
+  const renderAutomations=()=> <div className="page-content"><div className="page-heading"><div><div className="eyebrow">CONNECTED WORKSPACE</div><h1>Automations</h1><p className="subheading">Define operational triggers and review workflow readiness.</p></div><button className="btn primary" onClick={()=>setModal({type:'automation'})}><Plus size={16}/> New automation</button></div><div className="notice wide-notice"><Zap size={17}/><span>These are draft workflow definitions. Switches only change this demo screen; no messages, approvals or scheduled jobs execute.</span></div><div className="automation-grid">{[{name:'Attendance reminder',desc:'Notify supervisors when expected check-ins are missing.',trigger:'09:30 every workday',icon:Clock3,enabled:true},{name:'Resource request routing',desc:'Route new PEC, MDM, uniform and tablet requests to coordinators.',trigger:'When request is submitted',icon:ClipboardCheck,enabled:true},{name:'Dispatch checklist',desc:'Create a store checklist before each POSM/gift dispatch.',trigger:'Before dispatch date',icon:Truck,enabled:false},{name:'PO & invoice follow-up',desc:'Flag overdue supplier paperwork for Finance review.',trigger:'Daily · 10:00',icon:FileCheck2,enabled:false},{name:'WhatsApp daily summary',desc:'Prepare a digest of field updates for the operations lead.',trigger:'18:00 every workday',icon:MessageCircle,enabled:false},{name:'Post-activation report',desc:'Collect attendance, distribution and expense metrics after close.',trigger:'When project is completed',icon:FileText,enabled:false}].map((a,i)=><AutomationCard key={a.name} item={a} onToggle={()=>showToast('Demo automation setting changed; no workflow executed.')} onEdit={()=>setModal({type:'editAutomation',item:a})}/>)}</div></div>;
+
+  const renderSuperAdmin=()=> <div className="page-content"><div className="page-heading"><div><div className="eyebrow">ADMINISTRATION</div><h1>Super Admin</h1><p className="subheading">Integration readiness, access governance and system configuration.</p></div><span className="demo-pill"><ShieldCheck size={14}/> Not connected</span></div><div className="admin-banner"><ShieldCheck size={21}/><div><strong>Integration setup is not complete</strong><p>This console is a readiness checklist, not a live credential manager. Do not paste secrets here.</p></div></div><div className="admin-grid">{[{name:'Supabase',desc:'Database, Auth and Row Level Security',status:'Schema initialized',icon:Activity,items:['Project: SMOLLAN','Region: eu-west-1','5 core tables with RLS enabled']},{name:'Google Workspace SSO',desc:'Verified identity and @smollan.com access',status:'Not configured',icon:ShieldCheck,items:['Enable Google OAuth provider','Verify email_verified and exact domain server-side','Require active membership']},{name:'Drive & Calendar',desc:'Project documents and operational schedules',status:'Not connected',icon:FolderKanban,items:['OAuth scopes need review','Store file references, not public links','Restrict access by project role']},{name:'WhatsApp Business',desc:'Official messaging integration',status:'Not connected',icon:MessageCircle,items:['Business account and webhook','Template approval and opt-in','Server-side token storage']},{name:'AI provider',desc:'Secure server-side assistant requests',status:'Demo responses only',icon:Bot,items:['Configure server-side provider key','Apply sensitive-data safeguards','Log usage and errors']},{name:'Automations',desc:'Scheduled and event-driven workflows',status:'Draft only',icon:Workflow,items:['Choose trusted execution service','Define retries and idempotency','Audit each action'] }].map((it,i)=><div className="admin-card" key={it.name}><div className="admin-card-head"><span className="admin-icon"><it.icon size={19}/></span><span className="admin-state">{it.status}</span></div><h3>{it.name}</h3><p>{it.desc}</p><ul>{it.items.map(x=><li key={x}>{x}</li>)}</ul><button className="btn secondary full" onClick={()=>showToast('Setup checklist only — no credentials stored.')}>Review setup <ArrowRight size={15}/></button></div>)}</div><div className="footnote"><ShieldCheck size={15}/> Never trust navigation hiding for authorization. Enforce roles and record-level access on the server/database.</div></div>;
+
+  const renderCalendar=()=> <div className="page-content"><div className="page-heading"><div><div className="eyebrow">WORKSPACE</div><h1>Calendar</h1><p className="subheading">Upcoming project dates, tasks and field checkpoints.</p></div><button className="btn primary" onClick={()=>setModal({type:'create',module:'Tasks'})}><Plus size={16}/> Add task</button></div><div className="panel calendar-panel"><div className="calendar-head"><h2>October 2026</h2><span>Sample schedule · local demo</span></div>{[['15','Today','Attendance validation · PRJ-2601','09:00','blue'],['16','Tomorrow','PEC request review · PRJ-2602','11:00','amber'],['17','Saturday','POSM delivery window · PRJ-2603','14:00','purple'],['20','Tuesday','Gift stock reconciliation · PRJ-2604','10:30','green'],['24','Saturday','Beauty counter deadline · PRJ-2602','16:00','rose']].map(([day,tag,title,time,color])=><div className="calendar-event" key={day}><div className="calendar-date"><strong>{day}</strong><small>OCT</small></div><div className={'event-dot '+color}/><div className="event-copy"><span>{tag}</span><strong>{title}</strong></div><time>{time}</time></div>)}</div></div>;
+
+  const renderPortal=()=> <div className="page-content"><div className="page-heading"><div><div className="eyebrow">PROMOTER SELF-SERVICE</div><h1>My field portal</h1><p className="subheading">A focused view of your assignment, attendance and requests.</p></div><span className="demo-pill">Demo profile</span></div><div className="portal-grid"><div className="panel portal-assignment"><div className="panel-head"><div><h2>My active assignment</h2><p>Example promoter profile · not signed in</p></div><Status value="Active"/></div><h3>SMART — Carrefour Casablanca</h3><div className="portal-details"><span><Store size={16}/> Carrefour Sidi Maarouf</span><span><MapPin size={16}/> Casablanca</span><span><UserRound size={16}/> Youssef Amrani</span><span><CalendarDays size={16}/> Permanent · VSD</span></div><div className="clock-actions"><button className="btn primary" onClick={()=>showToast('Demo clock-in recorded locally only.')}><Clock3 size={16}/> Clock in</button><button className="btn secondary" onClick={()=>showToast('Demo clock-out recorded locally only.')}><CheckCircle2 size={16}/> Clock out</button></div><p className="muted-small">Clock actions are disabled from live attendance systems in this demo.</p></div><div className="panel"><div className="panel-head"><div><h2>My requests</h2><p>Status of submitted resources</p></div></div>{data['Resource Requests'].slice(0,3).map(r=><div className="mini-row" key={r.id}><span className="request-icon"><Package size={17}/></span><span><strong>{r.type}</strong><small>{r.project} · {r.date}</small></span><Status value={r.status}/></div>)}</div><div className="panel"><h2>Attendance summary</h2><div className="attendance-summary"><div><span className="summary-number">18</span><span>Present days</span></div><div><span className="summary-number">1</span><span>Late</span></div><div><span className="summary-number">0</span><span>Pending</span></div></div><p className="muted-small">Illustrative summary only.</p></div><div className="panel"><h2>My compliance</h2>{[['PEC contract','Valid'],['IT policy / MDM','Pending'],['Uniform','Issued'],['Tablet','Requested']].map(([t,s])=><div className="compliance-row" key={t}><span>{t}</span><Status value={s}/></div>)}</div></div></div>;
+
+  const renderContent=()=>{
+    if(active==='Overview')return renderOverview();
+    if(active==='Excel Import')return renderImport();
+    if(active==='AI Assistant')return renderAssistant();
+    if(active==='WhatsApp')return renderWhatsApp();
+    if(active==='Automations')return renderAutomations();
+    if(active==='Super Admin')return renderSuperAdmin();
+    if(active==='Calendar')return renderCalendar();
+    if(active==='Promoter Portal')return renderPortal();
+    if(data[active])return renderTable(active);
+    return <div className="page-content"><div className="page-heading"><div><div className="eyebrow">WORKSPACE</div><h1>{active}</h1><p className="subheading">Operational records and project-linked workflows.</p></div></div><div className="panel empty-state"><FolderKanban size={28}/><strong>{active} workspace</strong><span>This module is planned in the product blueprint. Connect its entity and role rules before entering production data.</span><button className="btn secondary" onClick={()=>setActive('Projects')}>Back to projects</button></div></div>;
   };
 
   return <div className="app-shell">
-    <aside className={'sidebar ' + (mobileNav ? 'sidebar-open' : '')}>
-      <div className="brand-lockup">
-        <div className="brand-mark"><span></span><span></span><span></span></div>
-        <div><div className="brand-name">SMOLLAN</div><div className="brand-location">MOROCCO <span>•</span> OPERATIONS</div></div>
-        <button className="icon-button close-mobile" onClick={() => setMobileNav(false)} aria-label="Fermer le menu"><X size={18}/></button>
-      </div>
-      <div className="workspace-switcher">
-        <div className="workspace-icon"><Command size={18}/></div>
-        <div className="workspace-copy"><strong>SMOLLAN Hub</strong><span>Espace de travail</span></div>
-        <ChevronDown size={15} className="muted"/>
-      </div>
-      <nav className="main-nav">
-        {navGroups.map(group => <div className="nav-group" key={group.label}>
-          <div className="nav-group-label">{group.label}</div>
-          {group.items.map(item => {
-            const Icon = item.icon;
-            return <button key={item.id} className={'nav-item ' + (active === item.id ? 'active' : '')} onClick={() => { setActive(item.id); setMobileNav(false); }}>
-              <Icon size={17} strokeWidth={1.8}/><span>{item.label}</span>{item.count && <span className="nav-count">{item.count}</span>}
-            </button>;
-          })}
-        </div>)}
-      </nav>
-      <div className="sidebar-spacer"/>
-      <div className="usage-card">
-        <div className="usage-top"><div className="usage-icon"><Sparkles size={16}/></div><span>ESPACE OPÉRATIONNEL</span><MoreHorizontal size={16}/></div>
-        <strong>Tout au même endroit.</strong>
-        <p>Projets, équipes, production et finance réunis dans un seul hub.</p>
-        <div className="usage-link" onClick={() => setActive('integrations')}>Configurer le workspace <ArrowRight size={14}/></div>
-      </div>
-      <div className="sidebar-bottom">
-        <button className="nav-item" onClick={() => setActive('integrations')}><Settings2 size={17}/><span>Paramètres</span></button>
-        <div className="user-profile">
-          <div className="avatar avatar-self">SM</div><div className="user-copy"><strong>Workspace admin</strong><span>Accès démonstration</span></div><MoreHorizontal size={18} className="muted"/>
-        </div>
-      </div>
-    </aside>
-
-    <main className="main-area">
-      <header className="topbar">
-        <div className="breadcrumbs">
-          <button className="icon-button hamburger" onClick={() => setMobileNav(true)} aria-label="Ouvrir le menu"><Menu size={19}/></button>
-          <span>SMOLLAN Hub</span><ChevronRight size={14}/><strong>{selected?.label || 'Vue d’ensemble'}</strong>
-        </div>
-        <div className="top-actions">
-          <div className="global-search"><Search size={16}/><input value={search} onChange={e => setSearch(e.target.value)} placeholder="Rechercher un projet, client…"/><kbd>⌘ K</kbd></div>
-          <button className="language-button" onClick={() => { setLang(lang === 'FR' ? 'EN' : 'FR'); acknowledge(lang === 'FR' ? 'English mode preview selected.' : 'Mode français sélectionné.'); }}>{lang}<ChevronDown size={13}/></button>
-          <button className="icon-button notification-button" onClick={() => acknowledge('Vous êtes à jour : 3 points demandent votre attention.')} aria-label="Notifications"><Bell size={18}/><i/></button>
-          <div className="avatar avatar-self top-avatar">SM</div>
-        </div>
-      </header>
-
-      <div className="page-content">
-        {active === 'overview' ? <Overview onCreate={() => setShowCreate(true)} setActive={setActive} tasks={tasks} markDone={markDone} filteredProjects={filteredProjects} search={search} filter={filter} setFilter={setFilter} acknowledge={acknowledge}/> :
-          active === 'projects' ? <Projects filteredProjects={filteredProjects} filter={filter} setFilter={setFilter} onCreate={() => setShowCreate(true)} search={search} acknowledge={acknowledge}/> :
-          active === 'tasks' ? <Tasks tasks={tasks} markDone={markDone} onCreate={() => setShowCreate(true)}/> :
-          active === 'calendar' ? <CalendarPage acknowledge={acknowledge}/> :
-          active === 'assistant' ? <AssistantPage acknowledge={acknowledge}/> :
-          active === 'whatsapp' ? <WhatsAppPage acknowledge={acknowledge}/> :
-          active === 'automations' ? <AutomationsPage acknowledge={acknowledge}/> :
-          active === 'superadmin' ? <SuperAdminPage acknowledge={acknowledge}/> :
-          <ModulePage active={active} selected={selected} acknowledge={acknowledge} onCreate={() => setShowCreate(true)}/>}
-      </div>
-      <footer className="app-footer"><span><i className="status-dot"/> Prototype opérationnel</span><span><ShieldCheck size={13}/> Accès interne prévu · SSO à configurer</span><span>SMOLLAN Morocco © 2026</span></footer>
-    </main>
-
-    {notice && <div role="status" className="toast"><CheckCircle2 size={17}/>{notice}<button onClick={() => setNotice('')} aria-label="Fermer"><X size={15}/></button></div>}
-    {showCreate && <div className="modal-backdrop" onMouseDown={e => { if(e.target === e.currentTarget) setShowCreate(false); }}>
-      <form className="create-modal" onSubmit={addTask}>
-        <div className="modal-head"><div className="modal-icon"><Plus size={19}/></div><button type="button" className="icon-button" onClick={() => setShowCreate(false)} aria-label="Fermer"><X size={18}/></button></div>
-        <h2>Créer une tâche</h2><p>Ajoutez une action au suivi opérationnel.</p>
-        <label htmlFor="task-title">Nom de la tâche</label><input autoFocus id="task-title" value={createTitle} onChange={e => setCreateTitle(e.target.value)} placeholder="Ex. Confirmer le dispatch des goodies" required/>
-        <div className="modal-note"><CalendarClock size={16}/> L’affectation, le projet et la date pourront être complétés dans le module Tâches.</div>
-        <div className="modal-actions"><button type="button" className="button-secondary" onClick={() => setShowCreate(false)}>Annuler</button><button className="button-primary" type="submit">Ajouter la tâche <ArrowRight size={15}/></button></div>
-      </form>
-    </div>}
+    <aside className={'sidebar '+(mobileOpen?'open':'')}><div className="brand"><div className="brand-mark">S<span>.</span></div><div><strong>SMOLLAN</strong><small>MOROCCO · OPERATIONS</small></div><button className="sidebar-close" onClick={()=>setMobileOpen(false)}><X size={18}/></button></div><div className="workspace-switch"><div className="workspace-avatar">M</div><div><strong>Morocco Operations</strong><small>Workspace</small></div><ChevronDown size={15}/></div><div className="nav-scroll">{visibleNav.map(group=><div className="nav-group" key={group.label}><div className="nav-label">{group.label}</div>{group.items.map(([name,Icon])=><button key={name} className={'nav-item '+(active===name?'active':'')} onClick={()=>{setActive(name);setQuery('');setMobileOpen(false);}}><Icon size={17}/><span>{name}</span>{name==='Resource Requests'&&pendingRequests>0&&<i className="nav-count">{pendingRequests}</i>}</button>)}</div>)}</div><div className="sidebar-bottom"><div className="support-card"><span><Headphones size={16}/></span><div><strong>Need a hand?</strong><small>Help & documentation</small></div><ChevronRight size={14}/></div><div className="profile-row"><div className="profile-avatar">AD</div><div className="profile-copy"><strong>Admin Demo</strong><small>Workspace preview</small></div><button className="icon-button"><MoreHorizontal size={18}/></button></div></div></aside>
+    {mobileOpen&&<div className="mobile-backdrop" onClick={()=>setMobileOpen(false)}/>}
+    <main className="main-area"><header className="topbar"><div className="topbar-left"><button className="mobile-menu" onClick={()=>setMobileOpen(true)}><Menu size={20}/></button><div className="breadcrumb">Workspace <ChevronRight size={14}/><strong>{active}</strong></div></div><div className="topbar-right"><div className="global-search"><Search size={15}/><input value={query} onChange={e=>setQuery(e.target.value)} onKeyDown={e=>e.key==='Enter'&&showToast('Search applied to the current module.')} placeholder="Search anything…"/><kbd>⌘ K</kbd></div><button className="icon-button notification" onClick={()=>setActive('Resource Requests')}><Bell size={18}/><i/></button><span className="topbar-divider"/><label className="role-select"><span>View as</span><select value={role} onChange={e=>{setRole(e.target.value);setActive(e.target.value==='Promoter'?'Promoter Portal':'Overview');}}>{roles.map(r=><option key={r}>{r}</option>)}</select><ChevronDown size={13}/></label></div></header>{renderContent()}</main>
+    {selectedProject&&<div className="modal-backdrop" onClick={()=>setSelectedProject(null)}><div className="modal project-detail" onClick={e=>e.stopPropagation()}><div className="modal-head"><div><div className="eyebrow">PROJECT OPERATIONAL HUB</div><h2>{selectedProject.name}</h2><p>{selectedProject.code} · {selectedProject.client}</p></div><button className="icon-button" onClick={()=>setSelectedProject(null)}><X size={18}/></button></div><div className="project-detail-stats"><div><span>Status</span><Status value={selectedProject.status}/></div><div><span>Budget</span><strong>{money(selectedProject.budget)}</strong></div><div><span>Promoters</span><strong>{selectedProject.promoters}</strong></div><div><span>Stores</span><strong>{selectedProject.stores}</strong></div></div><div className="detail-section"><h3>Related operational records</h3><div className="related-grid">{[['Promoters',Users],['Stores',Store],['Assignments',BriefcaseBusiness],['Attendance',Clock3],['Tasks',ClipboardList],['Gifts & Goodies',Gift],['PLV / POSM',Boxes],['Finance',WalletCards]].map(([name,Icon])=><button key={name} onClick={()=>{setActive(name);setQuery(selectedProject.code);setSelectedProject(null);}}><Icon size={17}/><span>{name}</span><ArrowRight size={14}/></button>)}</div></div><div className="modal-actions"><button className="btn secondary" onClick={()=>setSelectedProject(null)}>Close</button><button className="btn primary" onClick={()=>{setActive('Projects');setModal({type:'edit',module:'Projects',row:selectedProject,index:data.Projects.indexOf(selectedProject)});setSelectedProject(null);}}>Edit project <ArrowRight size={15}/></button></div></div></div>}
+    {modal&&<RecordModal modal={modal} data={data} onClose={()=>setModal(null)} onSave={row=>modal.type==='edit'? (updateRow(modal.module,modal.index,row),setModal(null),showToast('Record updated in demo session')):modal.type==='create'?addRow(modal.module,row):(setModal(null),showToast('Automation draft saved locally'))} />}
+    {toast&&<div className="toast"><CheckCircle2 size={17}/>{toast}</div>}
   </div>;
 }
 
-function Overview({ onCreate, setActive, tasks, markDone, filteredProjects, search, filter, setFilter, acknowledge }) {
-  return <>
-    <div className="welcome-row">
-      <div><div className="eyebrow"><span className="eyebrow-dot"/> JEUDI · 15 OCTOBRE 2026</div><h1>Bonjour, l’équipe <span className="title-period">.</span></h1><p className="page-subtitle">Voici ce qui se passe sur vos opérations aujourd’hui.</p></div>
-      <div className="welcome-actions"><button className="button-secondary" onClick={() => setActive('calendar')}><CalendarDays size={16}/> Voir le calendrier</button><button className="button-primary" onClick={onCreate}><Plus size={16}/> Nouvelle tâche</button></div>
-    </div>
-    <div className="demo-alert"><div className="demo-alert-icon"><Activity size={16}/></div><div><strong>Données de démonstration</strong><span>Projets et chiffres illustratifs — aucune donnée client ou RH réelle n’est connectée.</span></div><span className="demo-pill">PREVIEW</span></div>
-
-    <section className="metric-grid">
-      <Metric label="Projets actifs" value="24" delta="+3 ce mois" icon={FolderKanban} iconTone="blue" trend="up" footer="Sur l’ensemble du portefeuille"/>
-      <Metric label="Activations à venir" value="08" delta="3 cette semaine" icon={CalendarDays} iconTone="violet" trend="up" footer="Prochain départ · vendredi"/>
-      <Metric label="Tâches en retard" value="05" delta="2 critiques" icon={Clock3} iconTone="amber" trend="down" footer="À traiter en priorité"/>
-      <Metric label="CA à facturer" value="486 k" suffix="MAD" delta="71% du prévisionnel" icon={CircleDollarSign} iconTone="green" trend="up" footer="Estimé · mois en cours"/>
-    </section>
-
-    <div className="content-grid">
-      <section className="panel projects-panel">
-        <div className="panel-header"><div><div className="section-eyebrow">VUE PORTEFEUILLE</div><h2>Projets en cours <span className="count-bubble">{filteredProjects.length}</span></h2><p>Suivez l’avancement, du brief à la clôture.</p></div><button className="text-button" onClick={() => setActive('projects')}>Tous les projets <ArrowRight size={15}/></button></div>
-        <div className="table-toolbar"><div className="filter-tabs">{['Tous','En cours','En production','BAT à valider'].map(f => <button key={f} className={filter===f?'selected':''} onClick={() => setFilter(f)}>{f}</button>)}</div><button className="icon-button tiny-filter" onClick={() => setFilter('Tous')} title="Réinitialiser le filtre"><Filter size={15}/></button></div>
-        <div className="project-list">
-          {filteredProjects.slice(0,4).map((p, i) => <ProjectRow key={p.title} project={p} onClick={() => { setActive('projects'); acknowledge('Fiche projet de démonstration : ' + p.title); }}/>)}
-          {filteredProjects.length===0 && <div className="empty-state">Aucun projet ne correspond à cette recherche.</div>}
-        </div>
-        <button className="panel-bottom-link" onClick={() => setActive('projects')}>Ouvrir le portefeuille complet <ArrowRight size={15}/></button>
-      </section>
-
-      <section className="panel attention-panel">
-        <div className="panel-header compact"><div><div className="section-eyebrow">À SURVEILLER</div><h2>Points d’attention <span className="attention-count">3</span></h2><p>Les prochaines actions à sécuriser.</p></div><button className="icon-button" onClick={() => acknowledge('Liste des alertes actualisée (démo).')} aria-label="Actualiser"><Activity size={16}/></button></div>
-        <div className="attention-list">{attentionItems.map(item => {const Icon=item.icon;return <button className="attention-item" key={item.title} onClick={() => acknowledge(item.title + ' — ouvert dans le suivi (démo).')}><div className={'attention-icon '+item.tone}><Icon size={17}/></div><div className="attention-copy"><strong>{item.title}</strong><span>{item.subtitle}</span></div><div className={'attention-tag '+item.tone}>{item.tag}</div><ChevronRight size={15} className="attention-chevron"/></button>;})}</div>
-        <div className="attention-summary"><ShieldCheck size={17}/><div><strong>Le portefeuille est sous contrôle</strong><span>Traitez les validations avant les dispatchs.</span></div></div>
-      </section>
-    </div>
-
-    <div className="bottom-grid">
-      <section className="panel tasks-panel">
-        <div className="panel-header compact"><div><div className="section-eyebrow">VOTRE JOURNÉE</div><h2>Mes prochaines tâches <span className="count-bubble">{tasks.length}</span></h2></div><button className="text-button" onClick={() => setActive('tasks')}>Tout voir <ArrowRight size={14}/></button></div>
-        <div className="task-list">{tasks.slice(0,4).map(task => <div className="task-row" key={task.id}><button className="task-check" onClick={() => markDone(task.id)} aria-label={'Terminer ' + task.title}><CheckCircle2 size={17}/></button><div className="task-copy"><strong>{task.title}</strong><span>{task.project}</span></div><div className="task-meta"><span className={'task-state '+task.state.toLowerCase().replaceAll(' ','-')}>{task.state}</span><span className="task-due"><Clock3 size={12}/>{task.due}</span></div><button className="icon-button task-more" onClick={() => acknowledge('Action disponible dans la fiche de tâche (démo).')} aria-label="Options"><MoreHorizontal size={16}/></button></div>)}</div>
-      </section>
-      <section className="panel calendar-teaser">
-        <div className="panel-header compact"><div><div className="section-eyebrow">PROCHAINS TEMPS FORTS</div><h2>Cette semaine</h2></div><button className="icon-button" onClick={() => setActive('calendar')} aria-label="Ouvrir le calendrier"><ArrowRight size={16}/></button></div>
-        <div className="week-strip">{[['15','JEU'],['16','VEN'],['17','SAM'],['18','DIM'],['19','LUN']].map((d,i)=><button key={d[1]} className={'day-chip '+(i===0?'today':'')+(i===2||i===3?' event-day':'')} onClick={() => acknowledge(d[1]+' 15 octobre — planning de démonstration')}><span>{d[1]}</span><strong>{d[0]}</strong>{(i===2||i===3)&&<i/>}</button>)}</div>
-        <div className="event-row"><div className="event-color blue-event"></div><div className="event-copy"><strong>Galaxy Roadshow</strong><span>Samedi · 09:00–18:00 · 4 magasins</span></div><span className="event-label">VSD</span></div>
-        <div className="event-row"><div className="event-color rose-event"></div><div className="event-copy"><strong>Point formation animatrices</strong><span>Vendredi · 14:00 · Équipe terrain</span></div><span className="event-label muted-event">RH</span></div>
-      </section>
-    </div>
-    <div className="integration-strip"><div className="integration-logo google">G</div><div><strong>Votre stack reste connectée à votre quotidien.</strong><span>Drive, Calendar, Gmail, Meet & WhatsApp — liens centralisés, synchronisation API à activer.</span></div><button onClick={() => setActive('integrations')}>Voir les intégrations <ArrowRight size={14}/></button></div>
-  </>;
+function Metric({icon:Icon,label,value,note,trend,warn}){return <div className="metric-card"><div className="metric-top"><span className={'metric-icon '+(warn?'warn':'')}><Icon size={18}/></span>{trend&&<span className={'metric-trend '+(warn?'warn':'')}><ArrowUpRight size={13}/>{trend}</span>}</div><div className="metric-value">{value}</div><div className="metric-label">{label}</div><div className="metric-note">{note}</div></div>}
+function Avatar({name}){return <span className="avatar">{initials(name)}</span>}
+function AutomationCard({item,onToggle,onEdit}){const [enabled,setEnabled]=useState(item.enabled);const Icon=item.icon;return <div className="automation-card"><div className="automation-card-top"><span className="automation-icon"><Icon size={19}/></span><button className={'toggle '+(enabled?'on':'')} onClick={()=>{setEnabled(!enabled);onToggle();}} aria-label="Toggle demo automation"><i/></button></div><h3>{item.name}</h3><p>{item.desc}</p><div className="automation-trigger"><Clock3 size={14}/>{item.trigger}</div><div className="automation-card-bottom"><span className={enabled?'enabled-label':'disabled-label'}><i/>{enabled?'Enabled in demo':'Paused'}</span><button className="text-action" onClick={onEdit}>Configure <ChevronRight size={14}/></button></div></div>}
+function RecordModal({modal,data,onClose,onSave}){
+  const module=modal.module;
+  const [form,setForm]=useState(modal.row||{});
+  const [automationName,setAutomationName]=useState(modal.item?.name||'');
+  if(modal.type==='automation'||modal.type==='editAutomation')return <div className="modal-backdrop" onClick={onClose}><div className="modal" onClick={e=>e.stopPropagation()}><div className="modal-head"><div><h2>{modal.type==='automation'?'New automation draft':'Configure automation'}</h2><p>Draft only · no workflow will execute</p></div><button className="icon-button" onClick={onClose}><X size={18}/></button></div><label className="field-label">Automation name<input value={automationName} onChange={e=>setAutomationName(e.target.value)} placeholder="e.g. Missing attendance check"/></label><label className="field-label">Trigger<select><option>On record change</option><option>Scheduled time</option><option>When project status changes</option></select></label><label className="field-label">Action<select><option>Create task for review</option><option>Prepare notification draft</option><option>Flag record for approval</option></select></label><div className="modal-actions"><button className="btn secondary" onClick={onClose}>Cancel</button><button className="btn primary" onClick={()=>onSave({name:automationName})}>Save draft</button></div></div></div>;
+  const defaults={Projects:{code:'',name:'',client:'',type:'Temporary (Activation)',status:'Planning',city:'',start:'',end:'',budget:0,stores:0,promoters:0,supervisor:''},Promoters:{cin:'',name:'',phone:'',email:'',city:'',contract:'Permanent',status:'Available',uniform:'M',project:'—',pec:'Pending',device:'Phone',rating:'—'},Supervisors:{name:'',email:'',phone:'',city:'',zone:'',status:'Active',projects:0,stores:0},Stores:{code:'',name:'',city:'',banner:'',format:'Supermarket',address:'',status:'Active',projects:'',supervisor:''},Assignments:{id:'',promoter:'',cin:'',project:'',store:'',supervisor:'',start:'',end:'',status:'Active'},Attendance:{date:'2026-10-15',promoter:'',project:'',store:'',checkin:'',checkout:'',status:'Present',source:'Manual',validation:'Pending'},'Resource Requests':{id:'',type:'PEC',promoter:'',project:'',store:'',requester:'',date:'2026-10-15',status:'Pending',decision:''},'Gifts & Goodies':{name:'',category:'Samples',project:'',total:0,allocated:0,distributed:0,unitValue:0,status:'In progress'},'PLV / POSM':{name:'',type:'Display',project:'',quantity:0,unitCost:0,production:'Planning',deadline:'',installed:0,status:'Planning'},Tasks:{title:'',project:'',assignee:'',priority:'Medium',due:'',status:'To Do'},Finance:{project:'',category:'',budget:0,actual:0,funding:'Client',status:'On track'},Clients:{name:'',industry:'',contact:'',email:'',phone:'',status:'Active',projects:0}};
+  const base=modal.type==='edit'?form:(defaults[module]||{name:''});
+  const [values,setValues]=useState(base);
+  const enums={status:module==='Projects'?['Planning','Active','Completed','On Hold']:module==='Promoters'?['Available','Assigned','On Leave','Inactive']:module==='Attendance'?['Present','Absent','Late','Half-Day','Replaced']:module==='Resource Requests'?['Pending','Approved','Rejected']:['Active','Planning','Completed','On Hold'],type:module==='Projects'?['Permanent (SMART)','Temporary (Activation)']:module==='Resource Requests'?['PEC','IT Policy / MDM','Uniform','Tablet']:['Permanent','Activation','Freelance'],contract:['Permanent','Activation','Freelance'],priority:['Low','Medium','High','Urgent'],pec:['Valid','Pending','Expiring','Expired']};
+  const fields=Object.keys({...defaults[module],...(modal.type==='edit'?modal.row:{})});
+  const label=k=>({cin:'National ID / CIN',pec:'PEC status',unitValue:'Unit value (MAD)',unitCost:'Unit cost (MAD)',actual:'Actual amount (MAD)',budget:'Budget (MAD)',due:'Deadline',start:'Start date',end:'End date',checkin:'Check-in',checkout:'Check-out',client:'Client',name:'Name',code:'Source ID / code',id:'Record ID'}[k]||k.charAt(0).toUpperCase()+k.slice(1).replace(/([A-Z])/g,' $1'));
+  return <div className="modal-backdrop" onClick={onClose}><div className="modal record-modal" onClick={e=>e.stopPropagation()}><div className="modal-head"><div><h2>{modal.type==='edit'?'Edit':'Add'} {module?.replace(' & Goodies','')}</h2><p>Changes remain in this demo session.</p></div><button className="icon-button" onClick={onClose}><X size={18}/></button></div><div className="form-grid">{fields.map(k=><label className="field-label" key={k}>{label(k)}{enums[k]?<select value={values[k]??''} onChange={e=>setValues(v=>({...v,[k]:e.target.value}))}>{enums[k].map(o=><option key={o}>{o}</option>)}</select>:<input type={['budget','actual','unitValue','unitCost','total','allocated','distributed','quantity','installed','promoters','stores','projects'].includes(k)?'number':k==='email'?'email':/date|start|end|due|deadline/.test(k)?'date':'text'} value={values[k]??''} onChange={e=>setValues(v=>({...v,[k]:e.target.value}))} placeholder={label(k)}/>}</label>)}</div><div className="modal-actions"><button className="btn secondary" onClick={onClose}>Cancel</button><button className="btn primary" onClick={()=>onSave(values)}><Check size={15}/> Save record</button></div></div></div>;
 }
-
-function Metric({label,value,suffix,delta,icon:Icon,iconTone,trend,footer}) {
- return <div className="metric-card"><div className="metric-top"><span>{label}</span><div className={'metric-icon '+iconTone}><Icon size={18} strokeWidth={1.8}/></div></div><div className="metric-value">{value}{suffix&&<small> {suffix}</small>}</div><div className="metric-bottom"><span className={'metric-delta '+iconTone}>{trend==='up'?<ArrowUpRight size={13}/>:<ArrowDownRight size={13}/>} {delta}</span></div><div className="metric-footer">{footer}</div></div>;
-}
-function ProjectRow({project:p,onClick}) {
- return <button className="project-row" onClick={onClick}><div className={'client-logo '+p.color}>{p.initials}</div><div className="project-main"><div className="project-title-line"><strong>{p.title}</strong><span className="project-type">{p.type}</span></div><div className="project-subline"><span>{p.client}</span><i/> <span>{p.city}</span><i/> <span>{p.cadence}</span></div></div><div className="project-progress-wrap"><div className="progress-label"><span>{p.stage}</span><strong>{p.progress}%</strong></div><div className="progress-track"><span style={{width:p.progress+'%'}}></span></div></div><ChevronRight size={16} className="project-chevron"/></button>;
-}
-
-function Projects({filteredProjects,filter,setFilter,onCreate,search,acknowledge}) {
- return <><div className="page-heading-row"><div><div className="eyebrow"><span className="eyebrow-dot"/> PORTEFEUILLE</div><h1>Projets <span className="title-period">.</span></h1><p className="page-subtitle">Tous les formats d’engagement, suivis de bout en bout.</p></div><button className="button-primary" onClick={onCreate}><Plus size={16}/> Nouvelle tâche</button></div><div className="demo-alert"><Activity size={16}/><div><strong>Mode démonstration</strong><span>Les projets affichés servent de maquette UX et ne représentent pas le portefeuille réel.</span></div></div><div className="module-filter-row"><div className="filter-tabs">{['Tous','En cours','En production','BAT à valider','Production seule','Animation magasin'].map(f=><button key={f} className={filter===f?'selected':''} onClick={()=>setFilter(f)}>{f}</button>)}</div><button className="button-secondary" onClick={()=>setFilter('Tous')}><Filter size={15}/> Effacer les filtres</button></div><div className="projects-grid">{filteredProjects.map(p=><div className="project-card" key={p.title}><div className="project-card-top"><div className={'client-logo large '+p.color}>{p.initials}</div><span className={'risk-dot '+(p.risk==='Blocked'?'risk-red':p.risk==='Attention'?'risk-amber':'risk-green')}>{p.risk==='Blocked'?'Bloqué':p.risk==='Attention'?'Attention':'En bonne voie'}</span></div><div className="project-card-kicker">{p.client} <span>·</span> {p.type}</div><h3>{p.title}</h3><p className="project-card-location">{p.city}</p><div className="project-card-meta"><span><CalendarDays size={14}/>{p.dates}</span><span><Users size={14}/>{p.owner}</span></div><div className="card-progress"><div className="progress-label"><span>{p.stage}</span><strong>{p.progress}%</strong></div><div className="progress-track"><span style={{width:p.progress+'%'}}></span></div></div><div className="project-card-footer"><span className="cadence-pill">{p.cadence}</span><button className="text-button" onClick={()=>acknowledge('Fiche complète à connecter pour '+p.title)}>Ouvrir la fiche <ArrowRight size={14}/></button></div></div>)}</div></>;
-}
-
-function Tasks({tasks,markDone,onCreate}) {
- return <><div className="page-heading-row"><div><div className="eyebrow"><span className="eyebrow-dot"/> EXÉCUTION</div><h1>Tâches & validations<span className="title-period">.</span></h1><p className="page-subtitle">Gardez les briefs, BAT, équipes et échéances alignés.</p></div><button className="button-primary" onClick={onCreate}><Plus size={16}/> Nouvelle tâche</button></div><div className="demo-alert"><Activity size={16}/><div><strong>Données locales de démonstration</strong><span>Les changements ici sont temporaires et ne sont pas partagés avec les équipes.</span></div></div><div className="panel task-page-panel"><div className="panel-header"><div><h2>À traiter <span className="count-bubble">{tasks.length}</span></h2><p>Actions conservées dans cette session de démonstration.</p></div><button className="button-secondary"><Filter size={15}/> Filtrer</button></div>{tasks.length?tasks.map(t=><div className="task-row full-task" key={t.id}><button className="task-check" onClick={()=>markDone(t.id)} aria-label={'Terminer '+t.title}><CheckCircle2 size={17}/></button><div className="task-copy"><strong>{t.title}</strong><span>{t.project} · {t.owner}</span></div><span className="task-kind">{t.kind}</span><div className="task-meta"><span className={'task-state '+t.state.toLowerCase().replaceAll(' ','-')}>{t.state}</span><span className="task-due"><Clock3 size={12}/>{t.due}</span></div><button className="icon-button" aria-label="Ouvrir la tâche"><ChevronRight size={16}/></button></div>):<div className="empty-state"><CheckCircle2 size={23}/><strong>Tout est traité</strong><span>Créez une tâche pour alimenter la liste.</span></div>}</div></>;
-}
-
-function CalendarPage({acknowledge}) {
- const events=[{day:'VEN',date:'16',month:'OCT',time:'14:00',title:'Formation animatrices',desc:'Équipe terrain · Casablanca',kind:'RH',color:'rose'},{day:'SAM',date:'17',month:'OCT',time:'09:00',title:'Galaxy Roadshow',desc:'4 magasins · Casablanca & Rabat',kind:'VSD',color:'blue'},{day:'DIM',date:'18',month:'OCT',time:'09:00',title:'Galaxy Roadshow',desc:'Jour 2 · Check-in & reporting',kind:'VSD',color:'blue'},{day:'MAR',date:'20',month:'OCT',time:'11:00',title:'Livraison PLV Ariel',desc:'Contrôle qualité & réception',kind:'PROD',color:'amber'},{day:'SAM',date:'24',month:'OCT',time:'08:30',title:'Sampling Coca-Cola',desc:'Marrakech & Agadir',kind:'2 VSD',color:'green'}];
- return <><div className="page-heading-row"><div><div className="eyebrow"><span className="eyebrow-dot"/> PLANNING</div><h1>Calendrier opérationnel<span className="title-period">.</span></h1><p className="page-subtitle">Un seul planning pour les animations, équipes, production et finance.</p></div><button className="button-secondary" onClick={()=>acknowledge('Export calendrier disponible après connexion Google Calendar.')}><CalendarDays size={15}/> Connecter Google Calendar</button></div><div className="demo-alert"><Activity size={16}/><div><strong>Planning illustratif</strong><span>Connectez les calendriers autorisés pour afficher les événements réels.</span></div></div><div className="calendar-layout"><div className="panel month-panel"><div className="panel-header"><div><div className="section-eyebrow">CALENDRIER</div><h2>Octobre 2026</h2></div><div className="month-arrows"><button className="icon-button" onClick={()=>acknowledge('Navigation mensuelle à connecter.')}><ChevronLeft size={17}/></button><button className="icon-button" onClick={()=>acknowledge('Navigation mensuelle à connecter.')}><ChevronRight size={17}/></button></div></div><div className="month-grid">{['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'].map(d=><span className="month-weekday" key={d}>{d}</span>)}{Array.from({length:35},(_,i)=>{const n=i-2;const day=n+1;const outside=day<1||day>31;const real=outside?(day<1?30+day:day-31):day;const hasEvent=[16,17,18,20,24,25].includes(real)&&!outside;return <button key={i} className={'month-day '+(outside?'outside':'')+(real===15&&!outside?' today':'')+(hasEvent?' has-event':'')} onClick={()=>hasEvent?acknowledge('Événement de démonstration du '+real+' octobre'):null}><span>{real}</span>{hasEvent&&<i/>}</button>;})}</div><div className="calendar-legend"><span><i className="legend-blue"/> Activation magasin</span><span><i className="legend-rose"/> Formation / RH</span><span><i className="legend-amber"/> Production / dispatch</span></div></div><div className="panel upcoming-panel"><div className="panel-header"><div><div className="section-eyebrow">AGENDA</div><h2>Prochains événements</h2></div><span className="count-bubble">{events.length}</span></div><div className="upcoming-list">{events.map(e=><button className="upcoming-event" key={e.title+e.date} onClick={()=>acknowledge(e.title+' — '+e.date+' '+e.month+' (démo)')}><div className="event-datebox"><span>{e.day}</span><strong>{e.date}</strong><small>{e.month}</small></div><div className="event-line"><i className={e.color}/></div><div className="upcoming-copy"><div className="upcoming-title"><strong>{e.title}</strong><span className={'event-label '+(e.kind==='VSD'?'':'muted-event')}>{e.kind}</span></div><span>{e.time} · {e.desc}</span></div><ChevronRight size={15}/></button>)}</div></div></div></>;
-}
-
-const moduleContent = {
- people:{eyebrow:'FIELD OPERATIONS',title:'Équipes terrain',subtitle:'Animatrices, superviseurs, field managers et merchandisers.',icon:Users,stats:[['Affectations actives','126'],['Présences à vérifier','09'],['Formations planifiées','04']],tasks:['Affectations par client, ville et magasin','Plannings VSD / SD et remplacement','Pointage : import, anomalies, validation superviseur','Formation, uniformes et équipements attribués'],next:'Connecter la webapp de pointage existante avant toute paie ou facturation.'},
- production:{eyebrow:'CRÉATION & ACHATS',title:'Production & BAT',subtitle:'Du brief créatif à la validation BAT, production et livraison.',icon:FileCheck2,stats:[['BAT en attente','05'],['Ordres en production','08'],['Livraisons à confirmer','03']],tasks:['Brief créatif et références par version','Circuit de validation BAT avec horodatage','Fournisseurs, quantités, prix et contrôle qualité','Bons de livraison, dispatch et preuves de réception'],next:'Définir les approbateurs BAT et les seuils de validation des commandes.'},
- stock:{eyebrow:'LOGISTIQUE',title:'PLV, goodies & stock',subtitle:'Visibilité sur les quantités, réservations, dispatchs et retours.',icon:Package,stats:[['Références catalogue','84'],['Dispatchs en cours','07'],['Articles sous seuil','03']],tasks:['Catalogue PLV, stands, goodies et uniformes','Lots, emplacements et stock disponible / réservé','Bons de sortie et dispatch par ville, magasin, projet','Retours, casse, perte et rapprochement physique'],next:'Le stock doit être calculé à partir des mouvements, pas seulement d’un chiffre modifié manuellement.'},
- digital:{eyebrow:'ENGAGEMENT',title:'Jeux digitaux',subtitle:'Centralisez mécaniques, dotations, liens, QR et reporting.',icon:Zap,stats:[['Campagnes actives','03'],['Lots à distribuer','240'],['Redemptions cette semaine','186']],tasks:['Paramètres et règles de jeu par projet','Gestion des dotations et prix','Suivi des liens / QR codes et preuves de remise','Rapports agrégés pour le client'],next:'Définir le niveau de données personnelles nécessaire et la durée de conservation.'},
- finance:{eyebrow:'FINANCE',title:'Finance & documents',subtitle:'Devis, PO, BL et factures clients et fournisseurs dans un workflow traçable.',icon:WalletCards,stats:[['Devis à valider','04'],['PO client à recevoir','03'],['Factures à émettre','08']],tasks:['Devis client versionné avec lignes, quantités et TVA','PO client relié au projet et au devis approuvé','BL / réception puis facture client et suivi de paiement','Devis fournisseur, PO, BL, facture et échéance de paiement'],next:'Avant émission, Finance doit confirmer la numérotation, les taux de TVA et les validations requises.'},
- assets:{eyebrow:'PARC & MAINTENANCE',title:'Parc & assets',subtitle:'Suivi des équipements, véhicules, affectations et restitutions.',icon:Smartphone,stats:[['Assets inventoriés','92'],['Équipements affectés','71'],['Maintenances à prévoir','06']],tasks:['Ordinateurs, téléphones, tablettes et accessoires','IMEI / numéro de série, état et affectataire','Voitures superviseurs et field managers','Remise, restitution, incident et maintenance'],next:'Prévoir un formulaire de remise / retour signé et l’historique des mouvements.'},
- clients:{eyebrow:'RELATIONS & ACHATS',title:'Clients & fournisseurs',subtitle:'Référentiels partagés pour éviter les informations dispersées.',icon:Building2,stats:[['Clients suivis','18'],['Fournisseurs référencés','27'],['Briefs en qualification','06']],tasks:['Fiches clients, contacts et historique des projets','Fournisseurs, catégories, conditions et documents','Magasins et points de vente avec géographie','Liens vers Drive, échanges Gmail et réunions Meet'],next:'Importer les référentiels approuvés en conservant le propriétaire et la date de mise à jour.'},
- integrations:{eyebrow:'WORKSPACE',title:'Workspace & outils',subtitle:'Un point d’accès à vos outils actuels, avec intégrations à activer de manière contrôlée.',icon:HardDrive,stats:[['Outils à relier','05'],['Dépendances admin','03'],['Intégrations actives','00']],tasks:['Google Drive — liens et pièces jointes privées','Google Calendar — événements et planning','Gmail / Meet — références de communication','WhatsApp — liens des groupes projet et terrain'],next:'Les synchronisations Google API nécessitent un client OAuth, des scopes minimaux et l’accord de l’administrateur Workspace.'}
-};
-
-function ModulePage({active,selected,acknowledge,onCreate}) {
- const c=moduleContent[active]||moduleContent.projects; const Icon=c.icon;
- return <><div className="page-heading-row"><div><div className="eyebrow"><span className="eyebrow-dot"/> {c.eyebrow}</div><h1>{c.title}<span className="title-period">.</span></h1><p className="page-subtitle">{c.subtitle}</p></div><button className="button-primary" onClick={onCreate}><Plus size={16}/> Nouvelle tâche</button></div><div className="demo-alert"><Activity size={16}/><div><strong>Module en préfiguration</strong><span>Chiffres et éléments ci-dessous sont des exemples de mise en page, pas des données opérationnelles réelles.</span></div><span className="demo-pill">PREVIEW</span></div><div className="module-stat-grid">{c.stats.map(s=><div className="module-stat" key={s[0]}><span>{s[0]}</span><strong>{s[1]}</strong><ArrowUpRight size={15}/></div>)}</div><div className="module-layout"><div className="panel module-checklist"><div className="panel-header"><div><div className="section-eyebrow">FONCTIONNALITÉS</div><h2>Ce que ce module centralise</h2></div><div className="module-big-icon"><Icon size={20}/></div></div><div className="feature-list">{c.tasks.map((t,i)=><button key={t} className="feature-item" onClick={()=>acknowledge('Fonction à relier à la base sécurisée : '+t)}><span className="feature-number">0{i+1}</span><span>{t}</span><ChevronRight size={15}/></button>)}</div></div><div className="panel next-steps"><div className="section-eyebrow">PROCHAINE ÉTAPE</div><div className="next-icon"><Sparkles size={20}/></div><h3>Mettre ce flux en place</h3><p>{c.next}</p><button className="button-secondary full-width" onClick={()=>acknowledge('Action notée dans la maquette. Le suivi réel sera disponible après connexion du backend.')}>Préparer la configuration <ArrowRight size={15}/></button><div className="security-note"><ShieldCheck size={15}/><span>Rôles et permissions requis avant accès aux données réelles.</span></div></div></div></>;
-}
-
-
-
-function AssistantPage({ acknowledge }) {
-  const [input, setInput] = useState('');
-  const [activePrompt, setActivePrompt] = useState('today');
-  const [messages, setMessages] = useState([
-    { role: 'assistant', text: "Bonjour ! Je suis l’assistant SMOLLAN. Je peux vous aider à préparer une activation, suivre les validations, rédiger un message terrain ou transformer une demande en tâches. Les réponses ci-dessous utilisent uniquement les données de démonstration." },
-    { role: 'assistant', text: "J’ai repéré 3 priorités dans le scénario de démo : valider le BAT Galaxy, confirmer les tailles des uniformes Ariel et clôturer le pointage du sampling Coca-Cola." }
-  ]);
-  const prompts = [
-    { id:'today', icon: CalendarDays, title:'Préparer ma journée', prompt:'Prépare ma journée et liste les priorités.' },
-    { id:'activation', icon: Zap, title:'Lancer une activation', prompt:'Donne-moi une checklist de lancement d’activation retail.' },
-    { id:'followup', icon: MessageCircle, title:'Rédiger une relance', prompt:'Rédige une relance professionnelle pour un BAT en attente.' },
-    { id:'tasks', icon: ClipboardCheck, title:'Créer un plan d’action', prompt:'Transforme les validations en retard en plan d’action.' }
-  ];
-  const send = (text) => {
-    const value=(text || input).trim(); if(!value) return;
-    const lower=value.toLowerCase();
-    let answer="Je peux préparer un brouillon, une checklist ou un plan d’action. Pour agir sur les données réelles, l’assistant devra être connecté aux outils autorisés et vérifier vos permissions.";
-    if(lower.includes('journée') || lower.includes('priorit')) answer="Plan de journée proposé :\n1. Avant midi — obtenir la validation du BAT Galaxy et confirmer le bon à tirer final.\n2. Avant 15 h — récupérer les tailles et quantités d’uniformes Ariel.\n3. Fin de journée — vérifier le pointage du sampling Coca-Cola et signaler les écarts au chef de projet.\n\nJe peux convertir ces points en tâches assignables lorsque le backend sera connecté.";
-    else if(lower.includes('activation') || lower.includes('checklist')) answer="Checklist de lancement : brief et objectifs validés → budget/devis et PO confirmés → magasins et dates verrouillés → recrutement/formation terminés → BAT, PLV et uniformes approuvés → stock préparé → dispatch confirmé → présence terrain planifiée → reporting, photos et bilan post-activation.";
-    else if(lower.includes('relance') || lower.includes('bat')) answer="Objet : Relance — validation du BAT\n\nBonjour,\nNous revenons vers vous concernant le BAT en attente de validation. Afin de sécuriser le planning de production et la livraison, pourriez-vous nous transmettre votre retour ou votre bon pour accord ?\n\nMerci d’avance,\nL’équipe SMOLLAN Morocco\n\nBrouillon de démonstration — vérifiez le destinataire et les références avant envoi.";
-    else if(lower.includes('plan d’action') || lower.includes('tâche')) answer="Plan d’action proposé :\n• BAT Galaxy — responsable projet, échéance aujourd’hui 12 h, dépendance : retour client.\n• Uniformes Ariel — responsable production, échéance aujourd’hui 15 h, dépendance : tailles finales.\n• Pointage sampling — responsable terrain, échéance demain 10 h, dépendance : validation des feuilles de présence.\n\nAucune tâche réelle n’a été créée dans cette maquette.";
-    setMessages(prev=>[...prev,{role:'user',text:value},{role:'assistant',text:answer}]); setInput('');
-  };
-  return <>
-    <div className="page-heading-row"><div><div className="eyebrow"><span className="eyebrow-dot"/> COPILOTE OPÉRATIONNEL</div><h1>Assistant IA<span className="title-period">.</span></h1><p className="page-subtitle">Un copilote pour aider chaque équipe à avancer, préparer et coordonner son travail.</p></div><span className="admin-preview-pill"><Bot size={14}/> IA · mode démo</span></div>
-    <div className="demo-alert"><Bot size={17}/><div><strong>Assistant en mode démonstration</strong><span>Réponses simulées à partir d’exemples. Aucune donnée client réelle n’est consultée et aucune action n’est exécutée.</span></div><span className="demo-pill">PREVIEW</span></div>
-    <div className="ai-workspace">
-      <section className="panel ai-chat-panel">
-        <div className="ai-chat-header"><div className="ai-avatar"><WandSparkles size={20}/></div><div><strong>SMOLLAN Copilot</strong><span><i/> Disponible · démo locale</span></div><button className="icon-button" onClick={()=>setMessages([{role:'assistant',text:"Nouvelle conversation. Que souhaitez-vous préparer ?"}])} aria-label="Nouvelle conversation"><Plus size={17}/></button></div>
-        <div className="ai-context-strip"><span><FolderKanban size={13}/> Portefeuille</span><span><ClipboardCheck size={13}/> Tâches</span><span><CalendarDays size={13}/> Planning</span><span className="ai-context-demo">Données fictives</span></div>
-        <div className="ai-messages">{messages.map((m,i)=><div key={i} className={'ai-message '+m.role}><div className="ai-message-avatar">{m.role==='assistant'?<Bot size={15}/>:<Users size={15}/>}</div><div className="ai-message-body"><span>{m.role==='assistant'?'SMOLLAN Copilot':'Vous'}</span><p>{m.text}</p></div></div>)}</div>
-        <div className="ai-composer"><textarea value={input} onChange={e=>setInput(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send();}}} placeholder="Demandez un plan, un message, une checklist…" rows={2}/><div className="ai-composer-bottom"><span><Paperclip size={13}/> Connecteurs réels à configurer par Super Admin</span><button className="button-primary" onClick={()=>send()} disabled={!input.trim()}>Envoyer <Send size={14}/></button></div></div>
-      </section>
-      <aside className="ai-side-column"><section className="panel ai-suggestions"><div className="panel-header"><div><div className="section-eyebrow">POUR COMMENCER</div><h2>Raccourcis utiles</h2><p>Choisissez une tâche à préparer.</p></div></div><div className="ai-prompt-list">{prompts.map(p=>{const Icon=p.icon;return <button key={p.id} className={'ai-prompt '+(activePrompt===p.id?'selected':'')} onClick={()=>{setActivePrompt(p.id);send(p.prompt);}}><span><Icon size={16}/></span><div><strong>{p.title}</strong><small>{p.prompt}</small></div><ChevronRight size={15}/></button>;})}</div></section><section className="panel ai-capabilities"><div className="section-eyebrow">CAPACITÉS PRÉVUES</div><h3>De la question à l’action</h3><ul><li>Résumer les projets et les points bloquants</li><li>Préparer briefs, e-mails, relances et rapports</li><li>Transformer une demande en tâches assignées</li><li>Déclencher une automation après confirmation</li></ul><div className="security-note"><ShieldCheck size={15}/><span>Actions sensibles soumises aux permissions et à votre confirmation.</span></div></section></aside>
-    </div>
-  </>;
-}
-
-function WhatsAppPage({ acknowledge }) {
-  const [selected, setSelected] = useState('field');
-  const [draft, setDraft] = useState('');
-  const [filter, setFilter] = useState('Tous');
-  const [threads,setThreads]=useState([
-    {id:'field',name:'Équipe terrain · Casablanca',avatar:'ET',color:'green',kind:'Groupe',time:'10:42',unread:3,preview:'Les photos du stand sont envoyées.',messages:[['other','Salma B.','Bonjour, le stand Galaxy est prêt pour le démarrage.'],['other','Yassine M.','Il manque encore deux polos taille M.'],['me','Vous','Merci, vérifiez le stock avant le départ.'],['other','Salma B.','Les photos du stand sont envoyées.']]},
-    {id:'client',name:'Client · Activation Galaxy',avatar:'CG',color:'blue',kind:'Client',time:'09:18',unread:0,preview:'Merci pour le planning mis à jour.',messages:[['other','Client','Pouvez-vous confirmer le planning de samedi ?'],['me','Vous','Je vérifie avec le chef de projet et je reviens vers vous.'],['other','Client','Merci pour le planning mis à jour.']]},
-    {id:'supplier',name:'Fournisseur · Production PLV',avatar:'FP',color:'amber',kind:'Fournisseur',time:'Hier',unread:1,preview:'Le BAT est prêt pour votre retour.',messages:[['other','Production PLV','Le BAT est prêt pour votre retour.'],['other','Production PLV','Nous attendons votre validation pour lancer la production.']]},
-    {id:'hr',name:'Recrutement · Promotrices',avatar:'RH',color:'rose',kind:'Interne',time:'Hier',unread:0,preview:'Formation confirmée pour vendredi.',messages:[['other','Équipe RH','Formation confirmée pour vendredi.']]},
-  ]);
-  const thread=threads.find(t=>t.id===selected)||threads[0];
-  const send=()=>{if(!draft.trim())return;setThreads(prev=>prev.map(t=>t.id===selected?{...t,preview:draft,time:'À l’instant',messages:[...t.messages,['me','Vous',draft]]}:t));setDraft('');acknowledge('Message ajouté à la conversation de démonstration — aucun WhatsApp réel envoyé.');};
-  const visible=threads.filter(t=>(filter==='Tous'||(filter==='Non lus'&&t.unread>0)||t.kind===filter));
-  return <>
-    <div className="page-heading-row"><div><div className="eyebrow"><span className="eyebrow-dot"/> MESSAGERIE & COORDINATION</div><h1>WhatsApp Management<span className="title-period">.</span></h1><p className="page-subtitle">Centralisez les échanges terrain, clients et fournisseurs autour des activations.</p></div><span className="admin-preview-pill"><MessageCircle size={14}/> Canal non connecté</span></div>
-    <div className="demo-alert"><MessageCircle size={17}/><div><strong>Boîte de réception fictive</strong><span>Messages et réponses simulés. La connexion réelle nécessitera WhatsApp Business Platform et un numéro autorisé.</span></div><span className="demo-pill">PREVIEW</span></div>
-    <div className="wa-metrics"><div className="admin-stat"><span>Conversations</span><strong>{threads.length.toString().padStart(2,'0')}</strong><span className="admin-stat-note">dans la démo</span></div><div className="admin-stat"><span>Non lus</span><strong>{threads.reduce((n,t)=>n+t.unread,0).toString().padStart(2,'0')}</strong><span className="admin-stat-note">à traiter</span></div><div className="admin-stat"><span>Automations WhatsApp</span><strong>04</strong><span className="admin-stat-note">scénarios prévus</span></div></div>
-    <div className="wa-layout"><section className="panel wa-inbox"><div className="wa-inbox-head"><strong>Boîte de réception</strong><button className="icon-button" onClick={()=>acknowledge('Synchronisation indisponible : connectez WhatsApp Business dans Super Admin.')} aria-label="Synchroniser"><Activity size={15}/></button></div><div className="wa-filters">{['Tous','Non lus','Groupe','Client','Fournisseur'].map(f=><button key={f} className={filter===f?'selected':''} onClick={()=>setFilter(f)}>{f}</button>)}</div><div className="wa-thread-list">{visible.map(t=><button key={t.id} className={'wa-thread '+(selected===t.id?'selected':'')} onClick={()=>setSelected(t.id)}><span className={'wa-contact-avatar '+t.color}>{t.avatar}</span><span className="wa-thread-copy"><strong>{t.name}</strong><small>{t.preview}</small></span><span className="wa-thread-meta"><small>{t.time}</small>{t.unread>0&&<i>{t.unread}</i>}</span></button>)}</div><div className="wa-connect-hint"><ShieldCheck size={14}/><span>Connexion et permissions à configurer dans Super Admin.</span></div></section>
-    <section className="panel wa-conversation"><div className="wa-conversation-head"><span className={'wa-contact-avatar '+thread.color}>{thread.avatar}</span><div><strong>{thread.name}</strong><span>{thread.kind} · conversation de démonstration</span></div><button className="icon-button" onClick={()=>acknowledge('Fiche contact de démonstration.')} aria-label="Détails"><CircleHelp size={16}/></button></div><div className="wa-message-list">{thread.messages.map((m,i)=><div key={i} className={'wa-bubble-row '+(m[0]==='me'?'mine':'')}><div className="wa-bubble"><small>{m[1]}</small><p>{m[2]}</p><time>{i<2?'09:4'+i:'10:2'+i}</time></div></div>)}</div><div className="wa-reply-box"><textarea rows={2} value={draft} onChange={e=>setDraft(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send();}}} placeholder="Écrire une réponse (démo)…"/><div><span><Paperclip size={13}/> Réponse simulée</span><button className="button-primary" disabled={!draft.trim()} onClick={send}>Envoyer <Send size={14}/></button></div></div></section></div>
-    <div className="wa-bottom-grid"><section className="panel wa-feature-card"><div className="admin-side-icon"><Workflow size={18}/></div><div><strong>Automatiser les échanges répétitifs</strong><p>Rappels de pointage, confirmation de dispatch, collecte de photos, relances de validation et escalades.</p></div><button className="button-secondary" onClick={()=>acknowledge('Ouvrez Automatisations pour préparer les scénarios WhatsApp.')}>Voir les scénarios <ArrowRight size={14}/></button></section><section className="panel wa-feature-card"><div className="admin-side-icon"><Bot size={18}/></div><div><strong>IA assistante de messagerie</strong><p>Résumer les fils, suggérer des réponses et extraire des tâches — après connexion autorisée.</p></div><button className="button-secondary" onClick={()=>acknowledge('Assistant IA disponible en mode démo dans le menu principal.')}>Assistant IA <ArrowRight size={14}/></button></section></div>
-  </>;
-}
-
-function AutomationsPage({ acknowledge }) {
-  const [automations,setAutomations]=useState([
-    {id:1,name:'Rappel de pointage terrain',trigger:'Chaque jour · 09:00',detail:'Rappeler aux équipes de confirmer leur présence.',group:'Terrain',on:true},
-    {id:2,name:'Alerte BAT en attente',trigger:'Si validation > 24 h',detail:'Alerter le chef de projet et proposer une relance.',group:'Production',on:true},
-    {id:3,name:'Checklist avant dispatch',trigger:'À J-1 d’une activation',detail:'Vérifier stock, uniformes, adresses et contacts magasin.',group:'Logistique',on:true},
-    {id:4,name:'Suivi PO et factures',trigger:'Chaque lundi · 10:00',detail:'Lister les PO manquants et les pièces fournisseurs attendues.',group:'Finance',on:false},
-    {id:5,name:'Résumé WhatsApp terrain',trigger:'Chaque jour · 18:00',detail:'Préparer un résumé des incidents et actions à suivre.',group:'WhatsApp',on:false},
-    {id:6,name:'Rapport de clôture activation',trigger:'Après la date de fin',detail:'Assembler présence, photos, KPI et éléments de facturation.',group:'Reporting',on:true},
-  ]);
-  const [filter,setFilter]=useState('Tous');
-  const [showNew,setShowNew]=useState(false);
-  const [name,setName]=useState('');
-  const [trigger,setTrigger]=useState('À la création d’une tâche');
-  const visible=automations.filter(a=>filter==='Tous'||a.group===filter||(filter==='Actives'&&a.on)||(filter==='Inactives'&&!a.on));
-  const toggle=id=>setAutomations(prev=>prev.map(a=>a.id===id?{...a,on:!a.on}:a));
-  const add=()=>{if(!name.trim())return;setAutomations(prev=>[{id:Date.now(),name:name.trim(),trigger,detail:'Nouveau scénario — étapes à configurer.',group:'Personnalisée',on:false},...prev]);setName('');setShowNew(false);acknowledge('Automation ajoutée à la démo. Elle reste inactive tant que ses étapes ne sont pas configurées.');};
-  return <>
-    <div className="page-heading-row"><div><div className="eyebrow"><span className="eyebrow-dot"/> WORKFLOWS & RÈGLES MÉTIER</div><h1>Automatisations<span className="title-period">.</span></h1><p className="page-subtitle">Réduisez les relances manuelles et sécurisez les étapes clés des opérations.</p></div><button className="button-primary" onClick={()=>setShowNew(v=>!v)}><Plus size={15}/> Nouvelle automation</button></div>
-    <div className="demo-alert"><Workflow size={17}/><div><strong>Scénarios en mode démo</strong><span>Les interrupteurs modifient seulement cet écran. Aucun message, e-mail ou workflow réel n’est déclenché.</span></div><span className="demo-pill">PREVIEW</span></div>
-    <div className="automation-summary"><div><span>Scénarios</span><strong>{automations.length.toString().padStart(2,'0')}</strong></div><div><span>Actifs en démo</span><strong>{automations.filter(a=>a.on).length.toString().padStart(2,'0')}</strong></div><div><span>À configurer</span><strong>{automations.filter(a=>!a.on).length.toString().padStart(2,'0')}</strong></div><div><span>Dernière exécution réelle</span><strong>—</strong></div></div>
-    {showNew&&<section className="panel automation-new"><div><strong>Créer un scénario</strong><p>Définissez un nom et un déclencheur de départ.</p></div><div className="automation-new-fields"><input value={name} onChange={e=>setName(e.target.value)} placeholder="Ex. Relance des rapports terrain"/><select value={trigger} onChange={e=>setTrigger(e.target.value)}><option>À la création d’une tâche</option><option>À l’approche d’une échéance</option><option>Après une activation</option><option>À la réception d’un message WhatsApp</option><option>Selon un calendrier</option></select><button className="button-primary" onClick={add} disabled={!name.trim()}>Ajouter</button></div></section>}
-    <div className="automation-toolbar"><div className="filter-tabs">{['Tous','Actives','Inactives','Terrain','Production','Logistique','Finance','WhatsApp','Reporting'].map(f=><button key={f} className={filter===f?'selected':''} onClick={()=>setFilter(f)}>{f}</button>)}</div></div>
-    <div className="automation-grid">{visible.map(a=><section className="panel automation-card" key={a.id}><div className="automation-card-top"><span className="automation-icon"><Workflow size={17}/></span><button className={'admin-toggle '+(a.on?'on':'')} aria-label={(a.on?'Désactiver ':'Activer ')+a.name} onClick={()=>toggle(a.id)}><span/></button></div><span className="automation-category">{a.group}</span><h3>{a.name}</h3><p>{a.detail}</p><div className="automation-trigger"><Clock3 size={13}/><span>{a.trigger}</span></div><div className="automation-card-foot"><span className={'admin-status '+(a.on?'connected':'not-connected')}><i/>{a.on?'Activée en démo':'Inactive'}</span><button className="text-button" onClick={()=>acknowledge('Éditeur d’étapes disponible lorsque le moteur d’automatisation sera connecté.')}>Configurer <ArrowRight size={13}/></button></div></section>)}</div>
-    <section className="panel automation-flow"><div className="panel-header"><div><div className="section-eyebrow">MODÈLE DE WORKFLOW</div><h2>Un workflow, des garde-fous</h2><p>Les automatisations réelles suivront une chaîne vérifiable.</p></div></div><div className="flow-steps"><div><span>01</span><strong>Déclencheur</strong><small>Événement ou horaire</small></div><ArrowRight size={16}/><div><span>02</span><strong>Vérifications</strong><small>Rôle, données et conditions</small></div><ArrowRight size={16}/><div><span>03</span><strong>Action</strong><small>Créer, notifier ou préparer</small></div><ArrowRight size={16}/><div><span>04</span><strong>Journal</strong><small>Trace et résultat</small></div></div></section>
-  </>;
-}
-
-function SuperAdminPage({ acknowledge }) {
-  const [tab, setTab] = useState('integrations');
-  const [domain, setDomain] = useState('smollan.com');
-  const [clientId, setClientId] = useState('');
-  const [allowedScopes, setAllowedScopes] = useState(['openid', 'email', 'profile']);
-  const [enabled, setEnabled] = useState({ google: false, drive: false, calendar: false, gmail: false, meet: false, whatsapp: false, supabase: false, ai: false });
-  const integrations = [
-    { id: 'google', name: 'Google Workspace SSO', detail: 'OAuth 2.0 · smollan.com', group: 'IDENTITY', tone: 'blue' },
-    { id: 'drive', name: 'Google Drive', detail: 'Fichiers projet & documents finance', group: 'WORKSPACE', tone: 'green' },
-    { id: 'calendar', name: 'Google Calendar', detail: 'Planning activations & équipes', group: 'WORKSPACE', tone: 'blue' },
-    { id: 'gmail', name: 'Gmail', detail: 'Références de communication', group: 'WORKSPACE', tone: 'rose' },
-    { id: 'meet', name: 'Google Meet', detail: 'Réunions & comptes rendus', group: 'WORKSPACE', tone: 'amber' },
-    { id: 'whatsapp', name: 'WhatsApp Business', detail: 'Notifications via fournisseur officiel', group: 'MESSAGING', tone: 'green' },
-    { id: 'supabase', name: 'Supabase', detail: 'Auth, base de données & RLS', group: 'PLATFORM', tone: 'green' },
-    { id: 'ai', name: 'Assistant IA / fournisseur LLM', detail: 'API serveur · clés privées hors navigateur', group: 'AI', tone: 'purple' },
-  ];
-  const scopes = [
-    ['openid', 'Identité OpenID'], ['email', 'Adresse e-mail'], ['profile', 'Profil de base'],
-    ['drive.file', 'Drive — fichiers créés / partagés avec l’application'],
-    ['calendar.events', 'Calendar — événements'], ['gmail.readonly', 'Gmail — lecture seule (à justifier)']
-  ];
-  const toggleScope = (scope) => setAllowedScopes(current => current.includes(scope) ? current.filter(s => s !== scope) : [...current, scope]);
-  return <>
-    <div className="page-heading-row"><div><div className="eyebrow"><span className="eyebrow-dot"/> CONTRÔLE & SÉCURITÉ</div><h1>Super Admin<span className="title-period">.</span></h1><p className="page-subtitle">Configuration centralisée des API, OAuth, accès et connexions de la plateforme.</p></div><span className="admin-preview-pill"><ShieldCheck size={14}/> Mode démo · accès simulé</span></div>
-    <div className="demo-alert"><ShieldCheck size={17}/><div><strong>Console de configuration — maquette uniquement</strong><span>Aucun secret n’est envoyé ni enregistré. L’autorisation Super Admin réelle devra être vérifiée côté serveur avant la mise en production.</span></div><span className="demo-pill">PREVIEW</span></div>
-    <div className="admin-stat-grid"><div className="admin-stat"><span>Intégrations configurées</span><strong>{Object.values(enabled).filter(Boolean).length}<small> / {integrations.length}</small></strong><span className="admin-stat-note">état local de démonstration</span></div><div className="admin-stat"><span>Domaines autorisés</span><strong>01</strong><span className="admin-stat-note">smollan.com · à vérifier côté serveur</span></div><div className="admin-stat"><span>Secrets exposés au navigateur</span><strong className="safe-zero">0</strong><span className="admin-stat-note">les clés privées restent côté serveur</span></div></div>
-    <div className="admin-tabs">{[['integrations','Intégrations & API'],['oauth','OAuth & accès'],['security','Sécurité & audit']].map(([id,label])=><button key={id} className={tab===id?'selected':''} onClick={()=>setTab(id)}>{label}</button>)}</div>
-    {tab==='integrations' && <div className="admin-layout"><section className="panel admin-integrations"><div className="panel-header"><div><div className="section-eyebrow">CONNEXIONS</div><h2>Services de la plateforme</h2><p>Activez les services dans la démo pour prévisualiser leur état.</p></div><span className="admin-lock"><LockKeyhole size={14}/> Secrets serveur</span></div><div className="admin-integration-list">{integrations.map(item=><div className="admin-integration-row" key={item.id}><div className={'admin-service-icon '+item.tone}>{item.id==='google'?'G':item.id==='supabase'?'S':item.id==='ai'?'AI':item.id==='whatsapp'?'W':item.id==='drive'?'D':item.id==='calendar'?'C':item.id==='gmail'?'M':'M'}</div><div className="admin-service-copy"><strong>{item.name}</strong><span>{item.detail}</span><small>{item.group}</small></div><span className={'admin-status '+(enabled[item.id]?'connected':'not-connected')}><i/>{enabled[item.id]?'Démo activée':'Non configurée'}</span><button className={'admin-toggle '+(enabled[item.id]?'on':'')} aria-label={(enabled[item.id]?'Désactiver ':'Activer ')+item.name} onClick={()=>setEnabled(current=>({...current,[item.id]:!current[item.id]}))}><span/></button></div>)}</div></section><aside className="panel admin-side-card"><div className="admin-side-icon"><KeyRound size={19}/></div><div className="section-eyebrow">GESTION DES SECRETS</div><h3>Pas de clés dans le frontend</h3><p>Les API keys privées, refresh tokens et client secrets seront stockés dans les variables d’environnement / coffre serveur, jamais dans le code client.</p><div className="vault-row"><LockKeyhole size={15}/><div><strong>Secret vault</strong><span>À connecter côté serveur</span></div><span className="vault-badge">À FAIRE</span></div><button className="button-secondary full-width" onClick={()=>acknowledge('Préparation notée : configurer les secrets via l’environnement serveur sécurisé, pas dans cette maquette.')}>Voir les prérequis <ArrowRight size={14}/></button></aside></div>}
-    {tab==='oauth' && <div className="admin-layout"><section className="panel admin-config-panel"><div className="panel-header"><div><div className="section-eyebrow">IDENTITÉ</div><h2>Google OAuth & domaine</h2><p>Valeurs de préconfiguration — aucune connexion réelle n’est active.</p></div><span className="admin-status not-connected"><i/> Non connecté</span></div><div className="admin-form"><label htmlFor="admin-domain">Domaine autorisé</label><input id="admin-domain" value={domain} onChange={e=>setDomain(e.target.value)} /><p className="field-hint">Validation serveur requise : email_verified = true, domaine exact et membre actif autorisé.</p><label htmlFor="google-client-id">Google OAuth Client ID</label><input id="google-client-id" value={clientId} onChange={e=>setClientId(e.target.value)} placeholder="À renseigner par l’admin Google Workspace"/><p className="field-hint">Le Client ID n’est pas le Client Secret. Le secret ne doit jamais être saisi ici.</p><label>Scopes demandés</label><div className="scope-list">{scopes.map(([id,label])=><label key={id} className="scope-option"><input type="checkbox" checked={allowedScopes.includes(id)} onChange={()=>toggleScope(id)}/><span>{label}</span>{id==='gmail.readonly'&&<em>À justifier</em>}</label>)}</div><div className="admin-readonly-row"><span>Redirect URI Supabase</span><code>https://&lt;project-ref&gt;.supabase.co/auth/v1/callback</code><button className="text-button" onClick={()=>GenUICopyRedirect(acknowledge)}>Copier la structure</button></div><button className="button-primary" onClick={()=>acknowledge('Configuration OAuth enregistrée uniquement dans l’état de cette démo. Aucune clé ou connexion n’a été créée.')}>Enregistrer la préconfiguration <ArrowRight size={14}/></button></div></section><aside className="panel admin-side-card"><div className="admin-side-icon"><ShieldCheck size={19}/></div><div className="section-eyebrow">RÈGLES D’ACCÈS</div><h3>Allowlist + membership</h3><ul className="admin-rule-list"><li>Adresse e-mail vérifiée par Google</li><li>Domaine exact <strong>@{domain || 'smollan.com'}</strong></li><li>Membership SMOLLAN actif et rôle autorisé</li><li>Rôles contrôlés côté serveur / RLS</li></ul><div className="security-note"><ShieldCheck size={15}/><span>Masquer un bouton ne protège pas une API : chaque endpoint doit vérifier le rôle.</span></div></aside></div>}
-    {tab==='security' && <div className="admin-layout"><section className="panel admin-config-panel"><div className="panel-header"><div><div className="section-eyebrow">GOUVERNANCE</div><h2>Garde-fous de sécurité</h2><p>État attendu avant de brancher des données réelles.</p></div></div><div className="admin-security-list">{[['Rôles côté serveur','Super Admin / Admin / Manager / Finance / Terrain','À implémenter'],['Audit trail','Tracer les changements de configuration et d’accès','Prévu'],['RLS Supabase','Politiques testées par rôle et par action','À vérifier'],['Secrets & rotation','Secrets chiffrés côté serveur, rotation documentée','À configurer'],['OAuth scopes','Scopes minimaux, consentement explicite','À valider']].map(([title,detail,status])=><div className="admin-security-row" key={title}><ShieldCheck size={17}/><div><strong>{title}</strong><span>{detail}</span></div><span className="admin-status not-connected"><i/>{status}</span></div>)}</div></section><aside className="panel admin-side-card"><div className="admin-side-icon"><Activity size={19}/></div><div className="section-eyebrow">AUDIT</div><h3>Journal d’administration</h3><p>La version connectée enregistrera qui a changé quoi, quand et depuis quelle session — sans jamais journaliser les valeurs de secrets.</p><button className="button-secondary full-width" onClick={()=>acknowledge('Le journal d’audit réel sera activé avec le backend et les politiques d’accès.')}>Vérifier le journal <ArrowRight size={14}/></button></aside></div>}
-  </>;
-}
-
-function GenUICopyRedirect(acknowledge) {
-  acknowledge('Structure de callback : https://<project-ref>.supabase.co/auth/v1/callback — remplacez <project-ref> par la référence du projet dédié SMOLLAN.');
-}
-
 export default App;
