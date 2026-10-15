@@ -1,611 +1,253 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { 
-  LayoutDashboard, Users, FileText, Package, Search, 
-  AlertTriangle, CheckCircle, Clock, Download, UserPlus, 
-  History, Smartphone, ChevronRight, Filter, LogOut, 
-  MapPin, Shirt, ShieldCheck, X, Eye, CreditCard, 
-  UserCircle, Briefcase, Building2, Calendar, Edit3, ArrowRightLeft,
-  TrendingUp, BarChart3, Layers, Mail, FileStack, Settings, 
-  MonitorSmartphone, Database
+import React, { useMemo, useState } from 'react';
+import {
+  Activity, ArrowDownRight, ArrowRight, ArrowUpRight, Bell, CalendarDays,
+  CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, CircleDollarSign,
+  ClipboardCheck, Clock3, Command, FileCheck2, FileText, Filter, FolderKanban,
+  Gauge, LayoutDashboard, LifeBuoy, Menu, MessageSquare, MoreHorizontal,
+  Package, Plus, Search, Settings2, ShieldCheck, ShoppingBag, Smartphone,
+  Sparkles, Truck, Users, WalletCards, X, Zap, Building2, BriefcaseBusiness,
+  Shirt, HardDrive, CalendarClock
 } from 'lucide-react';
 
-// --- CONFIGURATION & GÉNÉRATEUR DE DONNÉES CENTRALISÉ ---
-const AGENCES = ["ARTUS", "SOS Interim", "Crit", "Interne"];
-const CLIENTS = ["Samsung", "L'Oréal", "Coca-Cola", "P&G", "Nestlé", "Unilever", "Danone"];
-const VILLES = ["Casablanca", "Rabat", "Marrakech", "Tanger", "Agadir", "Fès", "Oujda"];
-const STORES = ["Marjane", "Carrefour", "BIM", "LabelVie", "Acima"];
+const navGroups = [
+  { label: 'PILOTAGE', items: [
+    { id: 'overview', label: 'Vue d’ensemble', icon: LayoutDashboard },
+    { id: 'projects', label: 'Projets', icon: FolderKanban, count: '24' },
+    { id: 'tasks', label: 'Tâches & validations', icon: ClipboardCheck, count: '12' },
+    { id: 'calendar', label: 'Calendrier', icon: CalendarDays },
+  ]},
+  { label: 'OPÉRATIONS', items: [
+    { id: 'people', label: 'Équipes terrain', icon: Users },
+    { id: 'production', label: 'Production & BAT', icon: FileCheck2, count: '5' },
+    { id: 'stock', label: 'PLV, goodies & stock', icon: Package },
+    { id: 'digital', label: 'Jeux digitaux', icon: Zap },
+  ]},
+  { label: 'GESTION', items: [
+    { id: 'finance', label: 'Finance & documents', icon: WalletCards, count: '8' },
+    { id: 'assets', label: 'Parc & assets', icon: Smartphone },
+    { id: 'clients', label: 'Clients & fournisseurs', icon: Building2 },
+    { id: 'integrations', label: 'Workspace & outils', icon: HardDrive },
+  ]},
+];
 
-const PROJETS_PAR_CLIENT = {
-  "Samsung": ["Lancement S24", "Promo Galaxy Tab", "Roadshow Z-Flip"],
-  "L'Oréal": ["Gamme Revitalift", "Coloration Excellence", "Lancement Parfum"],
-  "Coca-Cola": ["Campagne Ramadan", "Sampling Euro2024", "Zero Sugar Tour"],
-  "P&G": ["Ariel Pods Demo", "Pampers Premium", "Gillette Labs"],
-  "Nestlé": ["Nescafé Gold", "Fitness Breakfast", "Purina Pro Plan"],
-  "Unilever": ["Dove Spa", "Magnum Pleasure Store", "Skip Ultimate"],
-  "Danone": ["Activia Challenge", "Danup Promo", "Centrale Laitière"]
-};
+const projects = [
+  { client: 'Samsung', initials: 'S', color: 'blue', title: 'Galaxy — Roadshow Retail', type: 'Activation', cadence: '3 VSD', owner: 'Salma B.', city: 'Casablanca · Rabat', dates: '17 oct. — 1 nov.', stage: 'En production', progress: 74, risk: 'On track' },
+  { client: "L’Oréal", initials: 'L', color: 'rose', title: 'Beauty Advisor — Permanent', type: 'Promoters permanents', cadence: 'VSD', owner: 'Youssef E.', city: 'National', dates: 'Continu', stage: 'En cours', progress: 86, risk: 'On track' },
+  { client: 'Coca-Cola', initials: 'C', color: 'red', title: 'Sampling — Week-end', type: 'Animation magasin', cadence: '2 VSD', owner: 'Nadia A.', city: 'Marrakech · Agadir', dates: '24 — 25 oct.', stage: 'Recrutement', progress: 46, risk: 'Attention' },
+  { client: 'P&G', initials: 'P', color: 'purple', title: 'Ariel — PLV & uniformes', type: 'Production seule', cadence: 'Livraison', owner: 'Mehdi R.', city: 'Casablanca', dates: '20 oct.', stage: 'BAT à valider', progress: 58, risk: 'Blocked' },
+];
 
-const generateExpiryDate = (index) => {
-  const d = new Date();
-  if (index % 15 === 0) d.setDate(d.getDate() + 3); 
-  else if (index % 10 === 0) d.setDate(d.getDate() - 2); 
-  else d.setDate(d.getDate() + (30 + (index % 60))); 
-  return d.toISOString().split('T')[0];
-};
+const tasksInitial = [
+  { id: 1, title: 'Valider le BAT stand Galaxy', project: 'Samsung · Galaxy Roadshow', owner: 'Salma B.', due: 'Aujourd’hui · 12:00', state: 'Urgent', kind: 'BAT' },
+  { id: 2, title: 'Confirmer les tailles uniformes', project: 'P&G · Ariel PLV', owner: 'Mehdi R.', due: 'Aujourd’hui · 15:00', state: 'À faire', kind: 'Production' },
+  { id: 3, title: 'Clôturer le pointage SD', project: 'Coca-Cola · Sampling', owner: 'Nadia A.', due: 'Demain · 10:00', state: 'En cours', kind: 'Terrain' },
+  { id: 4, title: 'Envoyer le devis révisé', project: 'L’Oréal · Beauty Advisor', owner: 'Youssef E.', due: 'Demain · 16:00', state: 'En attente', kind: 'Finance' },
+];
 
-const generateInitialData = (count) => {
-  const lastNames = ["Bennani", "Alami", "Idrissi", "Mansouri", "Kabbaj", "Tazi", "Zouhair", "Fassi", "Chraibi", "Amrani"];
-  const firstNames = ["Sara", "Mehdi", "Yassine", "Leila", "Driss", "Zineb", "Omar", "Meryem", "Hamza", "Anas"];
-  
-  return Array.from({ length: count }, (_, i) => {
-    const client = CLIENTS[i % CLIENTS.length];
-    const projets = PROJETS_PAR_CLIENT[client];
-    const projet = projets[Math.floor(Math.random() * projets.length)];
-    const status = Math.random() > 0.15 ? "Active" : "Disponible";
-    
-    return {
-      id: i + 1,
-      nom: lastNames[Math.floor(Math.random() * lastNames.length)],
-      prenom: firstNames[Math.floor(Math.random() * firstNames.length)],
-      cin: `${String.fromCharCode(65 + (i % 26))}${String.fromCharCode(66 + (i % 26))}${100000 + i}`,
-      type: i % 3 === 0 ? "Permanante" : "Ponctuelle",
-      agence: AGENCES[Math.floor(Math.random() * AGENCES.length)],
-      phones: { pro: `0661${100000 + i}`, perso: `0670${200000 + i}` },
-      photos: {
-        profile: `https://i.pravatar.cc/150?u=smollan${i}`,
-        cinRecto: "https://images.unsplash.com/photo-1554126807-6b10f6f6692a?w=400&q=80",
-        cinVerso: "https://images.unsplash.com/photo-1610348725531-843dff563e2c?w=400&q=80"
-      },
-      rh: { statut: status, joined: "2023-01-01" },
-      affectation: { 
-        client, projet,
-        magasin: STORES[Math.floor(Math.random() * STORES.length)],
-        ville: VILLES[Math.floor(Math.random() * VILLES.length)],
-      },
-      logistique: { 
-        taille: ["S", "M", "L", "XL"][Math.floor(Math.random() * 4)], 
-        statutUniforme: status === "Active" ? "Reçu" : "Restitué", 
-        tablette: i % 4 === 0 ? `SN-TAB-${888000 + i}` : "N/A" 
-      },
-      pec: { fin: generateExpiryDate(i), etat: i % 12 === 0 ? "Manquant" : "Original Papier" },
-      historique: [{ client: "Historique", projet: "Mission Q4 2023", magasin: "LabelVie", date: "2023-11-20" }]
-    };
-  });
-};
+const attentionItems = [
+  { title: 'BAT en attente de validation', subtitle: 'P&G · Ariel — PLV & uniformes', tag: '2 jours', icon: FileCheck2, tone: 'amber' },
+  { title: 'PO client manquant', subtitle: 'Coca-Cola · Sampling Week-end', tag: 'À relancer', icon: FileText, tone: 'rose' },
+  { title: 'Dispatch à confirmer', subtitle: 'Samsung · 4 magasins', tag: 'Demain', icon: Truck, tone: 'blue' },
+];
 
-const INITIAL_DB = generateInitialData(258);
+const money = n => new Intl.NumberFormat('fr-MA', { style: 'currency', currency: 'MAD', maximumFractionDigits: 0 }).format(n);
 
-// --- VISUAL ENGINE ---
-const VisualEffects = () => {
-  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
-  useEffect(() => {
-    const handleMouseMove = (e) => setMousePos({ x: e.clientX, y: e.clientY });
-    window.addEventListener('mousemove', handleMouseMove);
-    return () => window.removeEventListener('mousemove', handleMouseMove);
-  }, []);
+function App() {
+  const [active, setActive] = useState('overview');
+  const [search, setSearch] = useState('');
+  const [filter, setFilter] = useState('Tous');
+  const [tasks, setTasks] = useState(tasksInitial);
+  const [notice, setNotice] = useState('');
+  const [showCreate, setShowCreate] = useState(false);
+  const [createTitle, setCreateTitle] = useState('');
+  const [mobileNav, setMobileNav] = useState(false);
+  const [lang, setLang] = useState('FR');
 
-  return (
-    <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden bg-[#010413]">
-      <div className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] bg-blue-600/10 blur-[180px] rounded-full animate-pulse" />
-      <div className="absolute bottom-[-20%] right-[-10%] w-[60%] h-[60%] bg-indigo-600/10 blur-[180px] rounded-full" />
-      <div className="absolute w-[800px] h-[800px] bg-blue-500/5 blur-[140px] rounded-full transition-transform duration-700 ease-out"
-        style={{ transform: `translate(${mousePos.x - 400}px, ${mousePos.y - 400}px)` }} />
-      <div className="absolute inset-0 opacity-20">
-        {[...Array(40)].map((_, i) => (
-          <div key={i} className="absolute bg-white rounded-full blur-[1px] animate-float"
-            style={{ width: '2px', height: '2px', top: Math.random() * 100 + '%', left: Math.random() * 100 + '%', animationDelay: `${i*0.5}s` }} />
-        ))}
+  const selected = navGroups.flatMap(g => g.items).find(i => i.id === active);
+  const filteredProjects = useMemo(() => projects.filter(p => {
+    const matchesText = [p.client, p.title, p.type, p.owner, p.city].join(' ').toLowerCase().includes(search.toLowerCase());
+    const matchesStage = filter === 'Tous' || p.stage === filter || p.type === filter;
+    return matchesText && matchesStage;
+  }), [search, filter]);
+
+  const acknowledge = msg => {
+    setNotice(msg);
+    window.setTimeout(() => setNotice(''), 3200);
+  };
+
+  const markDone = id => {
+    setTasks(prev => prev.filter(t => t.id !== id));
+    acknowledge('Tâche marquée comme terminée dans cette démo.');
+  };
+
+  const addTask = e => {
+    e.preventDefault();
+    if (!createTitle.trim()) return;
+    setTasks(prev => [{ id: Date.now(), title: createTitle.trim(), project: 'Interne · À affecter', owner: 'Vous', due: 'À planifier', state: 'À faire', kind: 'Interne' }, ...prev]);
+    setCreateTitle('');
+    setShowCreate(false);
+    setActive('tasks');
+    acknowledge('Tâche ajoutée à la démonstration.');
+  };
+
+  return <div className="app-shell">
+    <aside className={'sidebar ' + (mobileNav ? 'sidebar-open' : '')}>
+      <div className="brand-lockup">
+        <div className="brand-mark"><span></span><span></span><span></span></div>
+        <div><div className="brand-name">SMOLLAN</div><div className="brand-location">MOROCCO <span>•</span> OPERATIONS</div></div>
+        <button className="icon-button close-mobile" onClick={() => setMobileNav(false)} aria-label="Fermer le menu"><X size={18}/></button>
       </div>
-      <style>{`@keyframes float { 0%, 100% { transform: translate(0,0); } 50% { transform: translate(40px, -40px); } } .animate-float { animation: float 15s infinite linear; }`}</style>
-    </div>
-  );
-};
-
-const GlassCard = ({ children, className = "" }) => (
-  <div className={`backdrop-blur-3xl bg-white/[0.03] border border-white/10 rounded-[32px] shadow-2xl transition-all duration-500 ${className}`}>
-    {children}
-  </div>
-);
-
-const Badge = ({ dateFin }) => {
-  const today = new Date();
-  const end = new Date(dateFin);
-  const diff = Math.ceil((end - today) / (1000 * 60 * 60 * 24));
-  if (diff < 0) return <span className="px-3 py-1 rounded-full text-[9px] font-black bg-red-500/20 text-red-400 border border-red-500/20 uppercase">Expiré</span>;
-  if (diff <= 7) return <span className="px-3 py-1 rounded-full text-[9px] font-black bg-orange-500/20 text-orange-400 border border-orange-500/20 uppercase tracking-widest">J-{diff}</span>;
-  return <span className="px-3 py-1 rounded-full text-[9px] font-black bg-green-500/20 text-green-400 border border-green-500/20 uppercase">Valide</span>;
-};
-
-// --- APP COMPONENT ---
-const App = () => {
-  const [view, setView] = useState('dashboard');
-  const [data, setData] = useState(INITIAL_DB);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedAnimator, setSelectedAnimator] = useState(null);
-  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
-  const [isReassignModalOpen, setIsReassignModalOpen] = useState(false);
-  const [selectedAgencyFilter, setSelectedAgencyFilter] = useState("TOUTES");
-
-  // Global Sync Stats
-  const globalStats = useMemo(() => {
-    const actives = data.filter(a => a.rh.statut === 'Active');
-    const alerts = data.filter(a => (new Date(a.pec.fin) - new Date()) / (1000 * 60 * 60 * 24) <= 7);
-    const tablets = data.filter(a => a.logistique.tablette !== 'N/A').length;
-    return { total: data.length, actives: actives.length, alerts: alerts.length, tablets, projects: 18 };
-  }, [data]);
-
-  const filteredData = data.filter(a => 
-    (a.nom + a.prenom + a.cin + a.agence + a.affectation.projet).toLowerCase().includes(searchTerm.toLowerCase()) &&
-    (selectedAgencyFilter === "TOUTES" || a.agence === selectedAgencyFilter)
-  );
-
-  const handleUpdatePec = (id) => {
-    setData(prev => prev.map(a => {
-      if (a.id === id) {
-        const nextYear = new Date(); nextYear.setFullYear(nextYear.getFullYear() + 1);
-        return { ...a, pec: { fin: nextYear.toISOString().split('T')[0], etat: "Original Papier" } };
-      }
-      return a;
-    }));
-  };
-
-  const handleMutation = (animId, newAffect) => {
-    setData(prev => prev.map(a => {
-      if (a.id === animId) {
-        const h = { ...a.affectation, date: new Date().toLocaleDateString() };
-        return { ...a, affectation: { ...a.affectation, ...newAffect }, rh: { statut: 'Active' }, historique: [h, ...a.historique] };
-      }
-      return a;
-    }));
-    setIsReassignModalOpen(false);
-  };
-
-  // --- SUB-VIEWS ---
-
-  const Sidebar = () => (
-    <div className="w-72 fixed left-0 top-0 h-screen z-30 p-6">
-      <GlassCard className="h-full flex flex-col p-4 border-white/5">
-        <div className="flex items-center gap-4 px-3 py-8 mb-8 border-b border-white/5">
-          <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center font-black text-white shadow-[0_0_20px_rgba(37,99,235,0.4)]">S</div>
-          <div>
-            <h1 className="text-white font-black text-xl tracking-tighter">SMOLLAN</h1>
-            <p className="text-[9px] text-blue-400 font-black uppercase tracking-[0.3em] mt-1 italic">Activation Hub</p>
-          </div>
+      <div className="workspace-switcher">
+        <div className="workspace-icon"><Command size={18}/></div>
+        <div className="workspace-copy"><strong>SMOLLAN Hub</strong><span>Espace de travail</span></div>
+        <ChevronDown size={15} className="muted"/>
+      </div>
+      <nav className="main-nav">
+        {navGroups.map(group => <div className="nav-group" key={group.label}>
+          <div className="nav-group-label">{group.label}</div>
+          {group.items.map(item => {
+            const Icon = item.icon;
+            return <button key={item.id} className={'nav-item ' + (active === item.id ? 'active' : '')} onClick={() => { setActive(item.id); setMobileNav(false); }}>
+              <Icon size={17} strokeWidth={1.8}/><span>{item.label}</span>{item.count && <span className="nav-count">{item.count}</span>}
+            </button>;
+          })}
+        </div>)}
+      </nav>
+      <div className="sidebar-spacer"/>
+      <div className="usage-card">
+        <div className="usage-top"><div className="usage-icon"><Sparkles size={16}/></div><span>ESPACE OPÉRATIONNEL</span><MoreHorizontal size={16}/></div>
+        <strong>Tout au même endroit.</strong>
+        <p>Projets, équipes, production et finance réunis dans un seul hub.</p>
+        <div className="usage-link" onClick={() => setActive('integrations')}>Configurer le workspace <ArrowRight size={14}/></div>
+      </div>
+      <div className="sidebar-bottom">
+        <button className="nav-item" onClick={() => setActive('integrations')}><Settings2 size={17}/><span>Paramètres</span></button>
+        <div className="user-profile">
+          <div className="avatar avatar-self">SM</div><div className="user-copy"><strong>Workspace admin</strong><span>Accès démonstration</span></div><MoreHorizontal size={18} className="muted"/>
         </div>
-        <nav className="flex-1 space-y-2">
-          {[
-            { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-            { id: 'base', label: 'Base Animatrices', icon: Users },
-            { id: 'control', label: 'Control Tower', icon: Briefcase },
-            { id: 'agences', label: 'Suivi Agences', icon: ShieldCheck },
-            { id: 'inventory', label: 'Inventaire Global', icon: Package },
-          ].map((item) => (
-            <button key={item.id} onClick={() => setView(item.id)}
-              className={`w-full flex items-center gap-4 px-5 py-4 rounded-2xl transition-all duration-500 ${
-                view === item.id ? 'bg-blue-600 text-white shadow-xl' : 'text-slate-400 hover:bg-white/5 hover:text-white'
-              }`}>
-              <item.icon size={18} />
-              <span className="text-sm font-bold">{item.label}</span>
-            </button>
-          ))}
-        </nav>
-        <div className="pt-6 border-t border-white/5 flex flex-col gap-2">
-           <button className="flex items-center gap-3 px-4 py-3 text-red-400 hover:bg-red-500/10 rounded-2xl transition-all font-bold text-sm"><LogOut size={18}/> Quitter</button>
-           <p className="text-[10px] text-slate-600 font-bold uppercase tracking-widest text-center mt-2">v4.8.2 Stable Build</p>
-        </div>
-      </GlassCard>
-    </div>
-  );
+      </div>
+    </aside>
 
-  const ControlTower = () => (
-    <div className="p-10 space-y-10 animate-in fade-in duration-700 overflow-y-auto">
-      <header className="flex justify-between items-end">
-        <div>
-          <h2 className="text-4xl font-black text-white tracking-tighter italic uppercase">Control Tower Projets</h2>
-          <p className="text-slate-400 mt-2 font-medium">Monitoring des {CLIENTS.length} clients et 18+ projets</p>
+    <main className="main-area">
+      <header className="topbar">
+        <div className="breadcrumbs">
+          <button className="icon-button hamburger" onClick={() => setMobileNav(true)} aria-label="Ouvrir le menu"><Menu size={19}/></button>
+          <span>SMOLLAN Hub</span><ChevronRight size={14}/><strong>{selected?.label || 'Vue d’ensemble'}</strong>
         </div>
-        <div className="bg-white/5 border border-white/10 px-6 py-3 rounded-2xl text-white font-bold text-sm flex items-center gap-2 tracking-widest uppercase">
-          <Database size={16} className="text-blue-500"/> Synchronisé
+        <div className="top-actions">
+          <div className="global-search"><Search size={16}/><input value={search} onChange={e => setSearch(e.target.value)} placeholder="Rechercher un projet, client…"/><kbd>⌘ K</kbd></div>
+          <button className="language-button" onClick={() => { setLang(lang === 'FR' ? 'EN' : 'FR'); acknowledge(lang === 'FR' ? 'English mode preview selected.' : 'Mode français sélectionné.'); }}>{lang}<ChevronDown size={13}/></button>
+          <button className="icon-button notification-button" onClick={() => acknowledge('Vous êtes à jour : 3 points demandent votre attention.')} aria-label="Notifications"><Bell size={18}/><i/></button>
+          <div className="avatar avatar-self top-avatar">SM</div>
         </div>
       </header>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {CLIENTS.map(client => {
-          const clientStaff = data.filter(a => a.affectation.client === client);
-          return (
-            <GlassCard key={client} className="p-8 hover:border-blue-500/30">
-               <div className="flex justify-between items-center mb-6">
-                 <h3 className="text-2xl font-black text-white">{client}</h3>
-                 <span className="bg-blue-600/10 text-blue-400 px-3 py-1 rounded-full text-[10px] font-black border border-blue-500/20">{clientStaff.length} AGENTS</span>
-               </div>
-               <div className="space-y-4">
-                 {PROJETS_PAR_CLIENT[client].map(proj => {
-                   const count = clientStaff.filter(a => a.affectation.projet === proj).length;
-                   return (
-                     <div key={proj} className="p-5 rounded-2xl bg-white/[0.02] border border-white/5 flex justify-between items-center group hover:bg-white/[0.05] transition-all">
-                        <div>
-                          <p className="text-white text-sm font-bold">{proj}</p>
-                          <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Top Magasins: Marjane, LabelVie</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-blue-500 font-black">{count}</p>
-                          <p className="text-[9px] text-slate-600 uppercase font-black">Effectif</p>
-                        </div>
-                     </div>
-                   );
-                 })}
-               </div>
-            </GlassCard>
-          );
-        })}
+      <div className="page-content">
+        {active === 'overview' ? <Overview onCreate={() => setShowCreate(true)} setActive={setActive} tasks={tasks} markDone={markDone} filteredProjects={filteredProjects} search={search} filter={filter} setFilter={setFilter} acknowledge={acknowledge}/> :
+          active === 'projects' ? <Projects filteredProjects={filteredProjects} filter={filter} setFilter={setFilter} onCreate={() => setShowCreate(true)} search={search} acknowledge={acknowledge}/> :
+          active === 'tasks' ? <Tasks tasks={tasks} markDone={markDone} onCreate={() => setShowCreate(true)}/> :
+          active === 'calendar' ? <CalendarPage acknowledge={acknowledge}/> :
+          <ModulePage active={active} selected={selected} acknowledge={acknowledge} onCreate={() => setShowCreate(true)}/>}
       </div>
+      <footer className="app-footer"><span><i className="status-dot"/> Prototype opérationnel</span><span><ShieldCheck size={13}/> Accès interne prévu · SSO à configurer</span><span>SMOLLAN Morocco © 2026</span></footer>
+    </main>
+
+    {notice && <div role="status" className="toast"><CheckCircle2 size={17}/>{notice}<button onClick={() => setNotice('')} aria-label="Fermer"><X size={15}/></button></div>}
+    {showCreate && <div className="modal-backdrop" onMouseDown={e => { if(e.target === e.currentTarget) setShowCreate(false); }}>
+      <form className="create-modal" onSubmit={addTask}>
+        <div className="modal-head"><div className="modal-icon"><Plus size={19}/></div><button type="button" className="icon-button" onClick={() => setShowCreate(false)} aria-label="Fermer"><X size={18}/></button></div>
+        <h2>Créer une tâche</h2><p>Ajoutez une action au suivi opérationnel.</p>
+        <label htmlFor="task-title">Nom de la tâche</label><input autoFocus id="task-title" value={createTitle} onChange={e => setCreateTitle(e.target.value)} placeholder="Ex. Confirmer le dispatch des goodies" required/>
+        <div className="modal-note"><CalendarClock size={16}/> L’affectation, le projet et la date pourront être complétés dans le module Tâches.</div>
+        <div className="modal-actions"><button type="button" className="button-secondary" onClick={() => setShowCreate(false)}>Annuler</button><button className="button-primary" type="submit">Ajouter la tâche <ArrowRight size={15}/></button></div>
+      </form>
+    </div>}
+  </div>;
+}
+
+function Overview({ onCreate, setActive, tasks, markDone, filteredProjects, search, filter, setFilter, acknowledge }) {
+  return <>
+    <div className="welcome-row">
+      <div><div className="eyebrow"><span className="eyebrow-dot"/> JEUDI · 15 OCTOBRE 2026</div><h1>Bonjour, l’équipe <span className="title-period">.</span></h1><p className="page-subtitle">Voici ce qui se passe sur vos opérations aujourd’hui.</p></div>
+      <div className="welcome-actions"><button className="button-secondary" onClick={() => setActive('calendar')}><CalendarDays size={16}/> Voir le calendrier</button><button className="button-primary" onClick={onCreate}><Plus size={16}/> Nouvelle tâche</button></div>
     </div>
-  );
+    <div className="demo-alert"><div className="demo-alert-icon"><Activity size={16}/></div><div><strong>Données de démonstration</strong><span>Projets et chiffres illustratifs — aucune donnée client ou RH réelle n’est connectée.</span></div><span className="demo-pill">PREVIEW</span></div>
 
-  const InventoryView = () => (
-    <div className="p-10 space-y-10 animate-in fade-in duration-700 overflow-y-auto">
-      <header>
-        <h2 className="text-4xl font-black text-white tracking-tighter italic uppercase">Inventaire Global Assets</h2>
-        <p className="text-slate-400 mt-2 font-medium italic">Tracking des 258 kits (Uniformes & IT)</p>
-      </header>
+    <section className="metric-grid">
+      <Metric label="Projets actifs" value="24" delta="+3 ce mois" icon={FolderKanban} iconTone="blue" trend="up" footer="Sur l’ensemble du portefeuille"/>
+      <Metric label="Activations à venir" value="08" delta="3 cette semaine" icon={CalendarDays} iconTone="violet" trend="up" footer="Prochain départ · vendredi"/>
+      <Metric label="Tâches en retard" value="05" delta="2 critiques" icon={Clock3} iconTone="amber" trend="down" footer="À traiter en priorité"/>
+      <Metric label="CA à facturer" value="486 k" suffix="MAD" delta="71% du prévisionnel" icon={CircleDollarSign} iconTone="green" trend="up" footer="Estimé · mois en cours"/>
+    </section>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <GlassCard className="p-8 lg:col-span-1">
-           <h3 className="text-white text-xl font-black mb-8 flex items-center gap-3 uppercase italic"><Shirt className="text-amber-500"/> Uniformes</h3>
-           <div className="space-y-6">
-             {['S', 'M', 'L', 'XL'].map(size => {
-               const count = data.filter(a => a.logistique.taille === size).length;
-               const percent = (count / data.length) * 100;
-               return (
-                 <div key={size} className="space-y-2">
-                   <div className="flex justify-between text-[10px] font-black text-slate-500 uppercase tracking-widest">
-                     <span>Taille {size}</span>
-                     <span className="text-white">{count} UNITÉS</span>
-                   </div>
-                   <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
-                     <div className="h-full bg-amber-500 rounded-full" style={{ width: `${percent}%` }}></div>
-                   </div>
-                 </div>
-               );
-             })}
-           </div>
-        </GlassCard>
+    <div className="content-grid">
+      <section className="panel projects-panel">
+        <div className="panel-header"><div><div className="section-eyebrow">VUE PORTEFEUILLE</div><h2>Projets en cours <span className="count-bubble">{filteredProjects.length}</span></h2><p>Suivez l’avancement, du brief à la clôture.</p></div><button className="text-button" onClick={() => setActive('projects')}>Tous les projets <ArrowRight size={15}/></button></div>
+        <div className="table-toolbar"><div className="filter-tabs">{['Tous','En cours','En production','BAT à valider'].map(f => <button key={f} className={filter===f?'selected':''} onClick={() => setFilter(f)}>{f}</button>)}</div><button className="icon-button tiny-filter" onClick={() => setFilter('Tous')} title="Réinitialiser le filtre"><Filter size={15}/></button></div>
+        <div className="project-list">
+          {filteredProjects.slice(0,4).map((p, i) => <ProjectRow key={p.title} project={p} onClick={() => { setActive('projects'); acknowledge('Fiche projet de démonstration : ' + p.title); }}/>)}
+          {filteredProjects.length===0 && <div className="empty-state">Aucun projet ne correspond à cette recherche.</div>}
+        </div>
+        <button className="panel-bottom-link" onClick={() => setActive('projects')}>Ouvrir le portefeuille complet <ArrowRight size={15}/></button>
+      </section>
 
-        <GlassCard className="p-8 lg:col-span-2">
-          <h3 className="text-white text-xl font-black mb-8 flex items-center gap-3 uppercase italic"><Smartphone className="text-blue-500"/> Parc IT & Tablettes</h3>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 max-h-[400px] overflow-y-auto custom-scrollbar pr-2">
-            {data.filter(a => a.logistique.tablette !== 'N/A').map(a => (
-              <div key={a.id} className="p-4 rounded-2xl bg-white/[0.02] border border-white/5 flex flex-col justify-between hover:bg-white/[0.08] transition-all">
-                <p className="text-[10px] text-blue-400 font-black uppercase tracking-widest mb-2">{a.logistique.tablette}</p>
-                <p className="text-white text-xs font-bold truncate">{a.nom} {a.prenom}</p>
-                <div className="flex justify-between items-center mt-3 pt-3 border-t border-white/5">
-                  <span className="text-[9px] text-green-400 font-black">EN LIGNE</span>
-                  <MonitorSmartphone size={14} className="text-slate-600"/>
-                </div>
-              </div>
-            ))}
-          </div>
-        </GlassCard>
-      </div>
+      <section className="panel attention-panel">
+        <div className="panel-header compact"><div><div className="section-eyebrow">À SURVEILLER</div><h2>Points d’attention <span className="attention-count">3</span></h2><p>Les prochaines actions à sécuriser.</p></div><button className="icon-button" onClick={() => acknowledge('Liste des alertes actualisée (démo).')} aria-label="Actualiser"><Activity size={16}/></button></div>
+        <div className="attention-list">{attentionItems.map(item => {const Icon=item.icon;return <button className="attention-item" key={item.title} onClick={() => acknowledge(item.title + ' — ouvert dans le suivi (démo).')}><div className={'attention-icon '+item.tone}><Icon size={17}/></div><div className="attention-copy"><strong>{item.title}</strong><span>{item.subtitle}</span></div><div className={'attention-tag '+item.tone}>{item.tag}</div><ChevronRight size={15} className="attention-chevron"/></button>;})}</div>
+        <div className="attention-summary"><ShieldCheck size={17}/><div><strong>Le portefeuille est sous contrôle</strong><span>Traitez les validations avant les dispatchs.</span></div></div>
+      </section>
     </div>
-  );
 
-  const AgencesView = () => {
-    const alertsByAgency = filteredData.filter(a => {
-      const diff = (new Date(a.pec.fin) - new Date()) / (1000 * 60 * 60 * 24);
-      return diff <= 7;
-    }).length;
-
-    return (
-      <div className="p-10 space-y-10 animate-in fade-in duration-500 overflow-y-auto">
-        <header className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-6">
-          <div>
-            <h2 className="text-4xl font-black text-white tracking-tighter italic uppercase">Suivi Agences & PEC</h2>
-            <p className="text-slate-400 mt-2 font-medium">Gestion contractuelle des {selectedAgencyFilter === "TOUTES" ? "4" : "1"} partenaires</p>
-          </div>
-          <div className="flex bg-white/5 p-2 rounded-[24px] border border-white/10 backdrop-blur-xl">
-             {["TOUTES", ...AGENCES].map(ag => (
-               <button key={ag} onClick={() => setSelectedAgencyFilter(ag)}
-                className={`px-5 py-3 rounded-2xl text-[10px] font-black transition-all ${
-                  selectedAgencyFilter === ag ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-500 hover:text-white'
-                }`}>
-                 {ag}
-               </button>
-             ))}
-          </div>
-        </header>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-           <GlassCard className="p-8 border-l-4 border-l-blue-600">
-             <p className="text-[10px] font-black text-slate-500 uppercase mb-2 tracking-widest">Effectif Sélectionné</p>
-             <h3 className="text-5xl font-black text-white tracking-tighter tabular-nums">{filteredData.length}</h3>
-           </GlassCard>
-           <GlassCard className="p-8 border-l-4 border-l-red-500">
-             <p className="text-[10px] font-black text-slate-500 uppercase mb-2 tracking-widest">Contrats à Renouveler</p>
-             <h3 className="text-5xl font-black text-red-500 tracking-tighter tabular-nums">{alertsByAgency}</h3>
-           </GlassCard>
-           <GlassCard className="p-8 border-l-4 border-l-green-500">
-              <p className="text-[10px] font-black text-slate-500 uppercase mb-2 tracking-widest">Conformité Globale</p>
-              <h3 className="text-5xl font-black text-green-500 tracking-tighter tabular-nums">{Math.round(((filteredData.length - alertsByAgency) / filteredData.length) * 100)}%</h3>
-           </GlassCard>
-        </div>
-
-        <GlassCard className="overflow-hidden">
-          <div className="p-6 bg-white/[0.02] border-b border-white/5 flex justify-between items-center">
-             <h4 className="text-white font-black text-xs uppercase tracking-[0.3em] italic">Liste Contractuelle : {selectedAgencyFilter}</h4>
-             <button className="bg-blue-600 text-white px-6 py-3 rounded-2xl text-[10px] font-black uppercase hover:bg-blue-700 transition-all flex items-center gap-2 shadow-xl">
-                <Mail size={16} /> Demande de PEC Groupée
-             </button>
-          </div>
-          <div className="max-h-[500px] overflow-y-auto custom-scrollbar">
-            <table className="w-full text-left">
-              <thead className="bg-[#020617] sticky top-0 z-10 text-[10px] font-black text-slate-500 uppercase tracking-widest border-b border-white/5">
-                <tr>
-                  <th className="px-8 py-5">Agent</th>
-                  <th className="px-8 py-5">Échéance PEC</th>
-                  <th className="px-8 py-5">Status</th>
-                  <th className="px-8 py-5">Projet</th>
-                  <th className="px-8 py-5 text-center">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-white/5">
-                {filteredData.map(a => (
-                  <tr key={a.id} className="group hover:bg-white/[0.02] transition-all">
-                    <td className="px-8 py-5 flex items-center gap-4">
-                       <img src={a.photos.profile} className="w-10 h-10 rounded-xl" />
-                       <div>
-                         <p className="text-white text-sm font-bold leading-tight">{a.nom} {a.prenom}</p>
-                         <p className="text-[10px] text-slate-500 font-mono tracking-tighter">{a.cin}</p>
-                       </div>
-                    </td>
-                    <td className="px-8 py-5">
-                       <p className="text-sm text-white font-mono font-bold tracking-tight italic">{a.pec.fin}</p>
-                    </td>
-                    <td className="px-8 py-5">
-                       <Badge dateFin={a.pec.fin} />
-                    </td>
-                    <td className="px-8 py-5">
-                       <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">{a.affectation.projet}</p>
-                    </td>
-                    <td className="px-8 py-5 text-center">
-                       <button onClick={() => handleUpdatePec(a.id)}
-                        className="p-3 bg-white/5 text-blue-500 hover:bg-blue-600 hover:text-white rounded-2xl transition-all shadow-xl group/btn">
-                         <FileStack size={20} className="group-hover/btn:scale-110 transition-transform" />
-                       </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </GlassCard>
-      </div>
-    );
-  };
-
-  const AnimatorList = () => (
-    <div className="p-10 space-y-10 animate-in fade-in duration-500">
-      <header className="flex justify-between items-end">
-        <div>
-          <h2 className="text-4xl font-black text-white tracking-tighter italic uppercase underline decoration-blue-600 decoration-4 underline-offset-8">Base de Données</h2>
-          <p className="text-slate-400 mt-4 font-medium italic">Accès aux {data.length} dossiers agents</p>
-        </div>
-        <div className="flex gap-4">
-           <div className="relative group">
-              <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-500 group-hover:text-blue-500 transition-colors" size={20} />
-              <input type="text" placeholder="Recherche massive (CIN, Agence, Projet)..."
-                className="bg-white/5 border border-white/10 rounded-full pl-14 pr-8 py-4 text-white text-sm focus:ring-4 focus:ring-blue-500/20 outline-none w-[450px] transition-all backdrop-blur-xl"
-                value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
-           </div>
-        </div>
-      </header>
-
-      <GlassCard className="overflow-hidden">
-        <div className="max-h-[600px] overflow-y-auto custom-scrollbar">
-          <table className="w-full text-left border-collapse">
-            <thead className="sticky top-0 z-10 bg-[#020617] backdrop-blur-md border-b border-white/10">
-              <tr className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">
-                <th className="px-8 py-6">Fiche Agent</th>
-                <th className="px-8 py-6">Contrat & Interim</th>
-                <th className="px-8 py-6">Mission & Point de Vente</th>
-                <th className="px-8 py-6">Validité PEC</th>
-                <th className="px-8 py-6 text-center">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-white/5">
-              {filteredData.map(a => (
-                <tr key={a.id} className="group hover:bg-white/[0.04] transition-all duration-300">
-                  <td className="px-8 py-6 flex items-center gap-5">
-                    <img src={a.photos?.profile} className="w-14 h-14 rounded-2xl object-cover border-2 border-white/10 group-hover:border-blue-500/40 transition-all" />
-                    <div>
-                      <p className="text-white font-black text-lg group-hover:text-blue-400 transition-colors leading-none">{a.nom} {a.prenom}</p>
-                      <p className="text-[10px] text-slate-500 font-mono tracking-widest uppercase mt-1 italic">{a.cin}</p>
-                    </div>
-                  </td>
-                  <td className="px-8 py-6">
-                    <p className="text-sm text-white font-black">{a.agence}</p>
-                    <p className="text-[10px] text-blue-500 font-black uppercase tracking-widest mt-0.5">{a.type}</p>
-                  </td>
-                  <td className="px-8 py-6">
-                    <p className="text-white text-sm font-black">{a.affectation?.projet}</p>
-                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tight italic">{a.affectation?.magasin} • {a.affectation?.ville}</p>
-                  </td>
-                  <td className="px-8 py-6">
-                     <Badge dateFin={a.pec.fin} />
-                  </td>
-                  <td className="px-8 py-6 text-center">
-                     <div className="flex justify-center gap-2">
-                       <button onClick={() => { setSelectedAnimator(a); setIsDetailModalOpen(true); }} className="p-3 bg-white/5 hover:bg-white/10 rounded-2xl text-slate-400 hover:text-white transition-all"><Eye size={18} /></button>
-                       <button onClick={() => { setSelectedAnimator(a); setIsReassignModalOpen(true); }} className="p-3 bg-blue-600/10 hover:bg-blue-600 rounded-2xl text-blue-400 hover:text-white transition-all"><ArrowRightLeft size={18} /></button>
-                     </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </GlassCard>
+    <div className="bottom-grid">
+      <section className="panel tasks-panel">
+        <div className="panel-header compact"><div><div className="section-eyebrow">VOTRE JOURNÉE</div><h2>Mes prochaines tâches <span className="count-bubble">{tasks.length}</span></h2></div><button className="text-button" onClick={() => setActive('tasks')}>Tout voir <ArrowRight size={14}/></button></div>
+        <div className="task-list">{tasks.slice(0,4).map(task => <div className="task-row" key={task.id}><button className="task-check" onClick={() => markDone(task.id)} aria-label={'Terminer ' + task.title}><CheckCircle2 size={17}/></button><div className="task-copy"><strong>{task.title}</strong><span>{task.project}</span></div><div className="task-meta"><span className={'task-state '+task.state.toLowerCase().replaceAll(' ','-')}>{task.state}</span><span className="task-due"><Clock3 size={12}/>{task.due}</span></div><button className="icon-button task-more" onClick={() => acknowledge('Action disponible dans la fiche de tâche (démo).')} aria-label="Options"><MoreHorizontal size={16}/></button></div>)}</div>
+      </section>
+      <section className="panel calendar-teaser">
+        <div className="panel-header compact"><div><div className="section-eyebrow">PROCHAINS TEMPS FORTS</div><h2>Cette semaine</h2></div><button className="icon-button" onClick={() => setActive('calendar')} aria-label="Ouvrir le calendrier"><ArrowRight size={16}/></button></div>
+        <div className="week-strip">{[['15','JEU'],['16','VEN'],['17','SAM'],['18','DIM'],['19','LUN']].map((d,i)=><button key={d[1]} className={'day-chip '+(i===0?'today':'')+(i===2||i===3?' event-day':'')} onClick={() => acknowledge(d[1]+' 15 octobre — planning de démonstration')}><span>{d[1]}</span><strong>{d[0]}</strong>{(i===2||i===3)&&<i/>}</button>)}</div>
+        <div className="event-row"><div className="event-color blue-event"></div><div className="event-copy"><strong>Galaxy Roadshow</strong><span>Samedi · 09:00–18:00 · 4 magasins</span></div><span className="event-label">VSD</span></div>
+        <div className="event-row"><div className="event-color rose-event"></div><div className="event-copy"><strong>Point formation animatrices</strong><span>Vendredi · 14:00 · Équipe terrain</span></div><span className="event-label muted-event">RH</span></div>
+      </section>
     </div>
-  );
+    <div className="integration-strip"><div className="integration-logo google">G</div><div><strong>Votre stack reste connectée à votre quotidien.</strong><span>Drive, Calendar, Gmail, Meet & WhatsApp — liens centralisés, synchronisation API à activer.</span></div><button onClick={() => setActive('integrations')}>Voir les intégrations <ArrowRight size={14}/></button></div>
+  </>;
+}
 
-  return (
-    <div className="min-h-screen bg-[#010413] text-slate-100 font-sans antialiased selection:bg-blue-500/30 overflow-hidden">
-      <VisualEffects />
-      <Sidebar />
-      <main className="pl-72 relative z-10 h-screen flex flex-col">
-        <div className="flex-1 overflow-y-auto custom-scrollbar">
-          {view === 'dashboard' && <div className="p-10 space-y-10 animate-in fade-in duration-1000">
-            <header className="flex justify-between items-end">
-              <div>
-                <h2 className="text-4xl font-black text-white tracking-tighter italic uppercase">Pilotage Hub</h2>
-                <p className="text-slate-400 mt-2 font-medium italic">Monitoring consolidé des 258 ressources</p>
-              </div>
-            </header>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-              {[
-                { label: 'Effectif Total', val: globalStats.total, icon: Users, color: 'text-blue-400' },
-                { label: 'Animatrices Actives', val: globalStats.actives, icon: CheckCircle, color: 'text-green-400' },
-                { label: 'Alertes PEC (J-7)', val: globalStats.alerts, icon: AlertTriangle, color: 'text-orange-400' },
-                { label: 'Parc Tablettes', val: globalStats.tablets, icon: Smartphone, color: 'text-purple-400' },
-              ].map((s, i) => (
-                <GlassCard key={i} className="p-8 group hover:scale-[1.03] transition-all">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">{s.label}</p>
-                      <h3 className="text-5xl font-black text-white tabular-nums tracking-tighter">{s.val}</h3>
-                    </div>
-                    <div className={`${s.color} p-4 bg-white/5 rounded-3xl`}><s.icon size={28} /></div>
-                  </div>
-                </GlassCard>
-              ))}
-            </div>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-               <GlassCard className="p-8"><h3 className="text-white text-xl font-black mb-6">Urgences PEC Immédiates</h3>
-                 <div className="space-y-4 max-h-[300px] overflow-y-auto custom-scrollbar pr-2">
-                   {data.filter(a => (new Date(a.pec.fin) - new Date()) / (1000 * 60 * 60 * 24) <= 3).slice(0, 10).map(a => (
-                     <div key={a.id} className="flex justify-between items-center p-4 bg-white/5 rounded-2xl border border-white/5">
-                        <div className="flex items-center gap-4">
-                          <img src={a.photos.profile} className="w-10 h-10 rounded-xl" />
-                          <div><p className="text-white text-sm font-bold">{a.nom} {a.prenom}</p><p className="text-[10px] text-slate-500">{a.agence}</p></div>
-                        </div>
-                        <Badge dateFin={a.pec.fin} />
-                     </div>
-                   ))}
-                 </div>
-               </GlassCard>
-               <GlassCard className="p-8 flex flex-col justify-center items-center text-center space-y-4">
-                  <TrendingUp size={48} className="text-blue-500 animate-bounce" />
-                  <h3 className="text-2xl font-black text-white italic">Performance Activation</h3>
-                  <p className="text-slate-400 text-sm max-w-xs">Le hub est synchronisé. Toutes les données reflètent l'état actuel du vivier Smollan.</p>
-               </GlassCard>
-            </div>
-          </div>}
-          {view === 'base' && <AnimatorList />}
-          {view === 'control' && <ControlTower />}
-          {view === 'agences' && <AgencesView />}
-          {view === 'inventory' && <InventoryView />}
-        </div>
-      </main>
+function Metric({label,value,suffix,delta,icon:Icon,iconTone,trend,footer}) {
+ return <div className="metric-card"><div className="metric-top"><span>{label}</span><div className={'metric-icon '+iconTone}><Icon size={18} strokeWidth={1.8}/></div></div><div className="metric-value">{value}{suffix&&<small> {suffix}</small>}</div><div className="metric-bottom"><span className={'metric-delta '+iconTone}>{trend==='up'?<ArrowUpRight size={13}/>:<ArrowDownRight size={13}/>} {delta}</span></div><div className="metric-footer">{footer}</div></div>;
+}
+function ProjectRow({project:p,onClick}) {
+ return <button className="project-row" onClick={onClick}><div className={'client-logo '+p.color}>{p.initials}</div><div className="project-main"><div className="project-title-line"><strong>{p.title}</strong><span className="project-type">{p.type}</span></div><div className="project-subline"><span>{p.client}</span><i/> <span>{p.city}</span><i/> <span>{p.cadence}</span></div></div><div className="project-progress-wrap"><div className="progress-label"><span>{p.stage}</span><strong>{p.progress}%</strong></div><div className="progress-track"><span style={{width:p.progress+'%'}}></span></div></div><ChevronRight size={16} className="project-chevron"/></button>;
+}
 
-      {/* DETAIL MODAL */}
-      {isDetailModalOpen && selectedAnimator && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-slate-950/95 backdrop-blur-3xl" onClick={() => setIsDetailModalOpen(false)} />
-          <GlassCard className="w-full max-w-5xl h-[85vh] relative overflow-hidden flex border-white/10 animate-in zoom-in duration-500">
-             <div className="w-80 border-r border-white/10 p-10 flex flex-col items-center bg-white/[0.02]">
-                <img src={selectedAnimator.photos?.profile} className="w-40 h-40 rounded-[40px] object-cover mb-8 shadow-2xl border-2 border-white/10 scale-110" />
-                <h2 className="text-2xl font-black text-white text-center leading-tight italic uppercase tracking-tighter">{selectedAnimator.prenom}<br/>{selectedAnimator.nom}</h2>
-                <div className="mt-10 w-full space-y-4">
-                   <div className="p-4 bg-white/5 rounded-3xl border border-white/5">
-                      <p className="text-[9px] text-slate-500 font-black uppercase tracking-widest mb-1">Identité CIN</p>
-                      <p className="text-sm font-black text-white italic">{selectedAnimator.cin}</p>
-                   </div>
-                   <div className="p-4 bg-white/5 rounded-3xl border border-white/5">
-                      <p className="text-[9px] text-slate-500 font-black uppercase tracking-widest mb-1">Contact Pro</p>
-                      <p className="text-sm font-black text-blue-400 italic font-mono">{selectedAnimator.phones?.pro}</p>
-                   </div>
-                </div>
-             </div>
-             <div className="flex-1 p-16 overflow-y-auto space-y-16">
-                <section>
-                   <h4 className="text-white font-black text-xl mb-10 italic uppercase tracking-widest underline decoration-blue-500 decoration-2 underline-offset-8">Vérification Documents</h4>
-                   <div className="grid grid-cols-2 gap-10">
-                      <div className="space-y-4">
-                         <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.2em]">CIN Recto Officiel</p>
-                         <img src={selectedAnimator.photos?.cinRecto} className="rounded-[40px] border-2 border-white/10 shadow-2xl transition hover:scale-[1.03] duration-500" />
-                      </div>
-                      <div className="space-y-4">
-                         <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.2em]">CIN Verso Officiel</p>
-                         <img src={selectedAnimator.photos?.cinVerso} className="rounded-[40px] border-2 border-white/10 shadow-2xl transition hover:scale-[1.03] duration-500" />
-                      </div>
-                   </div>
-                </section>
-                <section className="pt-16 border-t border-white/10">
-                   <h4 className="text-white font-black mb-8 italic uppercase tracking-widest underline decoration-amber-500 decoration-2 underline-offset-8">Traçabilité & Historique</h4>
-                   <div className="space-y-4">
-                     {selectedAnimator.historique.map((h, i) => (
-                       <div key={i} className="flex justify-between items-center p-6 bg-white/[0.03] rounded-3xl border border-white/5">
-                         <div>
-                            <p className="text-white font-black text-lg">{h.projet}</p>
-                            <p className="text-[10px] text-slate-500 font-bold uppercase mt-1 tracking-widest">{h.client} • {h.magasin}</p>
-                         </div>
-                         <div className="text-right">
-                            <p className="text-blue-400 font-black text-xs uppercase tracking-widest">{h.date}</p>
-                            <p className="text-[9px] text-slate-600 font-black uppercase tracking-widest mt-1">Archivé</p>
-                         </div>
-                       </div>
-                     ))}
-                   </div>
-                </section>
-             </div>
-          </GlassCard>
-        </div>
-      )}
+function Projects({filteredProjects,filter,setFilter,onCreate,search,acknowledge}) {
+ return <><div className="page-heading-row"><div><div className="eyebrow"><span className="eyebrow-dot"/> PORTEFEUILLE</div><h1>Projets <span className="title-period">.</span></h1><p className="page-subtitle">Tous les formats d’engagement, suivis de bout en bout.</p></div><button className="button-primary" onClick={onCreate}><Plus size={16}/> Nouvelle tâche</button></div><div className="demo-alert"><Activity size={16}/><div><strong>Mode démonstration</strong><span>Les projets affichés servent de maquette UX et ne représentent pas le portefeuille réel.</span></div></div><div className="module-filter-row"><div className="filter-tabs">{['Tous','En cours','En production','BAT à valider','Production seule','Animation magasin'].map(f=><button key={f} className={filter===f?'selected':''} onClick={()=>setFilter(f)}>{f}</button>)}</div><button className="button-secondary" onClick={()=>setFilter('Tous')}><Filter size={15}/> Effacer les filtres</button></div><div className="projects-grid">{filteredProjects.map(p=><div className="project-card" key={p.title}><div className="project-card-top"><div className={'client-logo large '+p.color}>{p.initials}</div><span className={'risk-dot '+(p.risk==='Blocked'?'risk-red':p.risk==='Attention'?'risk-amber':'risk-green')}>{p.risk==='Blocked'?'Bloqué':p.risk==='Attention'?'Attention':'En bonne voie'}</span></div><div className="project-card-kicker">{p.client} <span>·</span> {p.type}</div><h3>{p.title}</h3><p className="project-card-location">{p.city}</p><div className="project-card-meta"><span><CalendarDays size={14}/>{p.dates}</span><span><Users size={14}/>{p.owner}</span></div><div className="card-progress"><div className="progress-label"><span>{p.stage}</span><strong>{p.progress}%</strong></div><div className="progress-track"><span style={{width:p.progress+'%'}}></span></div></div><div className="project-card-footer"><span className="cadence-pill">{p.cadence}</span><button className="text-button" onClick={()=>acknowledge('Fiche complète à connecter pour '+p.title)}>Ouvrir la fiche <ArrowRight size={14}/></button></div></div>)}</div></>;
+}
 
-      {/* REASSIGN MODAL */}
-      {isReassignModalOpen && selectedAnimator && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-slate-950/90 backdrop-blur-2xl" onClick={() => setIsReassignModalOpen(false)} />
-          <GlassCard className="w-full max-w-xl relative overflow-hidden animate-in zoom-in duration-500 border-white/20">
-            <div className="p-10 bg-gradient-to-br from-blue-700 via-blue-600 to-indigo-800 text-white relative">
-              <h3 className="text-3xl font-black tracking-tighter italic uppercase">Flux de Mutation</h3>
-              <p className="text-blue-100/70 text-sm font-bold mt-2 uppercase tracking-widest">Mutation de {selectedAnimator.nom} {selectedAnimator.prenom}</p>
-            </div>
-            <div className="p-10 space-y-8">
-              <div className="space-y-6">
-                <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em]">Nouvelle Affectation Projet</label>
-                <select className="w-full bg-white/5 border border-white/10 rounded-3xl p-5 text-white font-bold outline-none focus:ring-4 focus:ring-blue-500/20 transition-all cursor-pointer">
-                  {CLIENTS.map(c => <optgroup key={c} label={c} className="bg-[#020617]">{PROJETS_PAR_CLIENT[c].map(p => <option key={p} className="bg-[#020617]">{p}</option>)}</optgroup>)}
-                </select>
-                <div className="grid grid-cols-2 gap-4">
-                   <select className="bg-white/5 border border-white/10 rounded-3xl p-4 text-white text-sm outline-none"><option className="bg-[#020617]">Magasin...</option>{STORES.map(s => <option key={s} className="bg-[#020617]">{s}</option>)}</select>
-                   <select className="bg-white/5 border border-white/10 rounded-3xl p-4 text-white text-sm outline-none"><option className="bg-[#020617]">Ville...</option>{VILLES.map(v => <option key={v} className="bg-[#020617]">{v}</option>)}</select>
-                </div>
-                <div className="bg-blue-600/10 p-6 rounded-3xl border border-blue-600/20 flex gap-4">
-                  <AlertTriangle size={24} className="text-blue-400 shrink-0" />
-                  <p className="text-slate-400 text-[11px] leading-relaxed italic">
-                    Cette action va clore la mission actuelle <strong className="text-white">({selectedAnimator.affectation.projet})</strong> et l'archiver dans l'historique de traçabilité.
-                  </p>
-                </div>
-              </div>
-            </div>
-            <div className="p-10 border-t border-white/10 flex gap-4 bg-white/[0.02]">
-              <button onClick={() => setIsReassignModalOpen(false)} className="flex-1 py-5 bg-white/5 text-white font-black rounded-3xl hover:bg-white/10 transition-all uppercase tracking-widest text-[10px]">Annuler</button>
-              <button onClick={() => handleMutation(selectedAnimator.id, { client: "Samsung", projet: "Mutation Q1", magasin: "Marjane", ville: "Casablanca" })}
-                className="flex-1 py-5 bg-blue-600 text-white font-black rounded-3xl hover:bg-blue-700 shadow-xl uppercase tracking-widest text-[10px]">Confirmer Mutation</button>
-            </div>
-          </GlassCard>
-        </div>
-      )}
+function Tasks({tasks,markDone,onCreate}) {
+ return <><div className="page-heading-row"><div><div className="eyebrow"><span className="eyebrow-dot"/> EXÉCUTION</div><h1>Tâches & validations<span className="title-period">.</span></h1><p className="page-subtitle">Gardez les briefs, BAT, équipes et échéances alignés.</p></div><button className="button-primary" onClick={onCreate}><Plus size={16}/> Nouvelle tâche</button></div><div className="demo-alert"><Activity size={16}/><div><strong>Données locales de démonstration</strong><span>Les changements ici sont temporaires et ne sont pas partagés avec les équipes.</span></div></div><div className="panel task-page-panel"><div className="panel-header"><div><h2>À traiter <span className="count-bubble">{tasks.length}</span></h2><p>Actions conservées dans cette session de démonstration.</p></div><button className="button-secondary"><Filter size={15}/> Filtrer</button></div>{tasks.length?tasks.map(t=><div className="task-row full-task" key={t.id}><button className="task-check" onClick={()=>markDone(t.id)} aria-label={'Terminer '+t.title}><CheckCircle2 size={17}/></button><div className="task-copy"><strong>{t.title}</strong><span>{t.project} · {t.owner}</span></div><span className="task-kind">{t.kind}</span><div className="task-meta"><span className={'task-state '+t.state.toLowerCase().replaceAll(' ','-')}>{t.state}</span><span className="task-due"><Clock3 size={12}/>{t.due}</span></div><button className="icon-button" aria-label="Ouvrir la tâche"><ChevronRight size={16}/></button></div>):<div className="empty-state"><CheckCircle2 size={23}/><strong>Tout est traité</strong><span>Créez une tâche pour alimenter la liste.</span></div>}</div></>;
+}
 
-      <style>{`
-        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 10px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.15); }
-      `}</style>
-    </div>
-  );
+function CalendarPage({acknowledge}) {
+ const events=[{day:'VEN',date:'16',month:'OCT',time:'14:00',title:'Formation animatrices',desc:'Équipe terrain · Casablanca',kind:'RH',color:'rose'},{day:'SAM',date:'17',month:'OCT',time:'09:00',title:'Galaxy Roadshow',desc:'4 magasins · Casablanca & Rabat',kind:'VSD',color:'blue'},{day:'DIM',date:'18',month:'OCT',time:'09:00',title:'Galaxy Roadshow',desc:'Jour 2 · Check-in & reporting',kind:'VSD',color:'blue'},{day:'MAR',date:'20',month:'OCT',time:'11:00',title:'Livraison PLV Ariel',desc:'Contrôle qualité & réception',kind:'PROD',color:'amber'},{day:'SAM',date:'24',month:'OCT',time:'08:30',title:'Sampling Coca-Cola',desc:'Marrakech & Agadir',kind:'2 VSD',color:'green'}];
+ return <><div className="page-heading-row"><div><div className="eyebrow"><span className="eyebrow-dot"/> PLANNING</div><h1>Calendrier opérationnel<span className="title-period">.</span></h1><p className="page-subtitle">Un seul planning pour les animations, équipes, production et finance.</p></div><button className="button-secondary" onClick={()=>acknowledge('Export calendrier disponible après connexion Google Calendar.')}><CalendarDays size={15}/> Connecter Google Calendar</button></div><div className="demo-alert"><Activity size={16}/><div><strong>Planning illustratif</strong><span>Connectez les calendriers autorisés pour afficher les événements réels.</span></div></div><div className="calendar-layout"><div className="panel month-panel"><div className="panel-header"><div><div className="section-eyebrow">CALENDRIER</div><h2>Octobre 2026</h2></div><div className="month-arrows"><button className="icon-button" onClick={()=>acknowledge('Navigation mensuelle à connecter.')}><ChevronLeft size={17}/></button><button className="icon-button" onClick={()=>acknowledge('Navigation mensuelle à connecter.')}><ChevronRight size={17}/></button></div></div><div className="month-grid">{['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'].map(d=><span className="month-weekday" key={d}>{d}</span>)}{Array.from({length:35},(_,i)=>{const n=i-2;const day=n+1;const outside=day<1||day>31;const real=outside?(day<1?30+day:day-31):day;const hasEvent=[16,17,18,20,24,25].includes(real)&&!outside;return <button key={i} className={'month-day '+(outside?'outside':'')+(real===15&&!outside?' today':'')+(hasEvent?' has-event':'')} onClick={()=>hasEvent?acknowledge('Événement de démonstration du '+real+' octobre'):null}><span>{real}</span>{hasEvent&&<i/>}</button>;})}</div><div className="calendar-legend"><span><i className="legend-blue"/> Activation magasin</span><span><i className="legend-rose"/> Formation / RH</span><span><i className="legend-amber"/> Production / dispatch</span></div></div><div className="panel upcoming-panel"><div className="panel-header"><div><div className="section-eyebrow">AGENDA</div><h2>Prochains événements</h2></div><span className="count-bubble">{events.length}</span></div><div className="upcoming-list">{events.map(e=><button className="upcoming-event" key={e.title+e.date} onClick={()=>acknowledge(e.title+' — '+e.date+' '+e.month+' (démo)')}><div className="event-datebox"><span>{e.day}</span><strong>{e.date}</strong><small>{e.month}</small></div><div className="event-line"><i className={e.color}/></div><div className="upcoming-copy"><div className="upcoming-title"><strong>{e.title}</strong><span className={'event-label '+(e.kind==='VSD'?'':'muted-event')}>{e.kind}</span></div><span>{e.time} · {e.desc}</span></div><ChevronRight size={15}/></button>)}</div></div></div></>;
+}
+
+const moduleContent = {
+ people:{eyebrow:'FIELD OPERATIONS',title:'Équipes terrain',subtitle:'Animatrices, superviseurs, field managers et merchandisers.',icon:Users,stats:[['Affectations actives','126'],['Présences à vérifier','09'],['Formations planifiées','04']],tasks:['Affectations par client, ville et magasin','Plannings VSD / SD et remplacement','Pointage : import, anomalies, validation superviseur','Formation, uniformes et équipements attribués'],next:'Connecter la webapp de pointage existante avant toute paie ou facturation.'},
+ production:{eyebrow:'CRÉATION & ACHATS',title:'Production & BAT',subtitle:'Du brief créatif à la validation BAT, production et livraison.',icon:FileCheck2,stats:[['BAT en attente','05'],['Ordres en production','08'],['Livraisons à confirmer','03']],tasks:['Brief créatif et références par version','Circuit de validation BAT avec horodatage','Fournisseurs, quantités, prix et contrôle qualité','Bons de livraison, dispatch et preuves de réception'],next:'Définir les approbateurs BAT et les seuils de validation des commandes.'},
+ stock:{eyebrow:'LOGISTIQUE',title:'PLV, goodies & stock',subtitle:'Visibilité sur les quantités, réservations, dispatchs et retours.',icon:Package,stats:[['Références catalogue','84'],['Dispatchs en cours','07'],['Articles sous seuil','03']],tasks:['Catalogue PLV, stands, goodies et uniformes','Lots, emplacements et stock disponible / réservé','Bons de sortie et dispatch par ville, magasin, projet','Retours, casse, perte et rapprochement physique'],next:'Le stock doit être calculé à partir des mouvements, pas seulement d’un chiffre modifié manuellement.'},
+ digital:{eyebrow:'ENGAGEMENT',title:'Jeux digitaux',subtitle:'Centralisez mécaniques, dotations, liens, QR et reporting.',icon:Zap,stats:[['Campagnes actives','03'],['Lots à distribuer','240'],['Redemptions cette semaine','186']],tasks:['Paramètres et règles de jeu par projet','Gestion des dotations et prix','Suivi des liens / QR codes et preuves de remise','Rapports agrégés pour le client'],next:'Définir le niveau de données personnelles nécessaire et la durée de conservation.'},
+ finance:{eyebrow:'FINANCE',title:'Finance & documents',subtitle:'Devis, PO, BL et factures clients et fournisseurs dans un workflow traçable.',icon:WalletCards,stats:[['Devis à valider','04'],['PO client à recevoir','03'],['Factures à émettre','08']],tasks:['Devis client versionné avec lignes, quantités et TVA','PO client relié au projet et au devis approuvé','BL / réception puis facture client et suivi de paiement','Devis fournisseur, PO, BL, facture et échéance de paiement'],next:'Avant émission, Finance doit confirmer la numérotation, les taux de TVA et les validations requises.'},
+ assets:{eyebrow:'PARC & MAINTENANCE',title:'Parc & assets',subtitle:'Suivi des équipements, véhicules, affectations et restitutions.',icon:Smartphone,stats:[['Assets inventoriés','92'],['Équipements affectés','71'],['Maintenances à prévoir','06']],tasks:['Ordinateurs, téléphones, tablettes et accessoires','IMEI / numéro de série, état et affectataire','Voitures superviseurs et field managers','Remise, restitution, incident et maintenance'],next:'Prévoir un formulaire de remise / retour signé et l’historique des mouvements.'},
+ clients:{eyebrow:'RELATIONS & ACHATS',title:'Clients & fournisseurs',subtitle:'Référentiels partagés pour éviter les informations dispersées.',icon:Building2,stats:[['Clients suivis','18'],['Fournisseurs référencés','27'],['Briefs en qualification','06']],tasks:['Fiches clients, contacts et historique des projets','Fournisseurs, catégories, conditions et documents','Magasins et points de vente avec géographie','Liens vers Drive, échanges Gmail et réunions Meet'],next:'Importer les référentiels approuvés en conservant le propriétaire et la date de mise à jour.'},
+ integrations:{eyebrow:'WORKSPACE',title:'Workspace & outils',subtitle:'Un point d’accès à vos outils actuels, avec intégrations à activer de manière contrôlée.',icon:HardDrive,stats:[['Outils à relier','05'],['Dépendances admin','03'],['Intégrations actives','00']],tasks:['Google Drive — liens et pièces jointes privées','Google Calendar — événements et planning','Gmail / Meet — références de communication','WhatsApp — liens des groupes projet et terrain'],next:'Les synchronisations Google API nécessitent un client OAuth, des scopes minimaux et l’accord de l’administrateur Workspace.'}
 };
+
+function ModulePage({active,selected,acknowledge,onCreate}) {
+ const c=moduleContent[active]||moduleContent.projects; const Icon=c.icon;
+ return <><div className="page-heading-row"><div><div className="eyebrow"><span className="eyebrow-dot"/> {c.eyebrow}</div><h1>{c.title}<span className="title-period">.</span></h1><p className="page-subtitle">{c.subtitle}</p></div><button className="button-primary" onClick={onCreate}><Plus size={16}/> Nouvelle tâche</button></div><div className="demo-alert"><Activity size={16}/><div><strong>Module en préfiguration</strong><span>Chiffres et éléments ci-dessous sont des exemples de mise en page, pas des données opérationnelles réelles.</span></div><span className="demo-pill">PREVIEW</span></div><div className="module-stat-grid">{c.stats.map(s=><div className="module-stat" key={s[0]}><span>{s[0]}</span><strong>{s[1]}</strong><ArrowUpRight size={15}/></div>)}</div><div className="module-layout"><div className="panel module-checklist"><div className="panel-header"><div><div className="section-eyebrow">FONCTIONNALITÉS</div><h2>Ce que ce module centralise</h2></div><div className="module-big-icon"><Icon size={20}/></div></div><div className="feature-list">{c.tasks.map((t,i)=><button key={t} className="feature-item" onClick={()=>acknowledge('Fonction à relier à la base sécurisée : '+t)}><span className="feature-number">0{i+1}</span><span>{t}</span><ChevronRight size={15}/></button>)}</div></div><div className="panel next-steps"><div className="section-eyebrow">PROCHAINE ÉTAPE</div><div className="next-icon"><Sparkles size={20}/></div><h3>Mettre ce flux en place</h3><p>{c.next}</p><button className="button-secondary full-width" onClick={()=>acknowledge('Action notée dans la maquette. Le suivi réel sera disponible après connexion du backend.')}>Préparer la configuration <ArrowRight size={15}/></button><div className="security-note"><ShieldCheck size={15}/><span>Rôles et permissions requis avant accès aux données réelles.</span></div></div></div></>;
+}
 
 export default App;
