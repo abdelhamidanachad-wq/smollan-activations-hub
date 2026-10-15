@@ -1,0 +1,33 @@
+name: PHP application checks
+on:
+  push:
+    branches: [feat/php-operations-platform]
+    paths: ['php-app/**', '.github/workflows/php-app-checks.yml']
+  pull_request:
+    paths: ['php-app/**', '.github/workflows/php-app-checks.yml']
+  workflow_dispatch:
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo_pgsql, curl, json
+          tools: composer:v2
+      - name: PHP syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+          find php-app -type f -name '*.php' -print0 | xargs -0 -n1 php -l
+      - name: Composer manifest
+        run: composer validate --no-check-publish --no-interaction
+        working-directory: php-app
+      - name: Check required app files
+        run: |
+          test -f php-app/public/index.php
+          test -f php-app/app/Application.php
+          test -f php-app/app/Support/Database.php
+          test -f php-app/app/Services/WorkflowService.php
