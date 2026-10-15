@@ -3,10 +3,10 @@ import {
   Activity, ArrowDownRight, ArrowRight, ArrowUpRight, Bell, CalendarDays,
   CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, CircleDollarSign,
   ClipboardCheck, Clock3, Command, FileCheck2, FileText, Filter, FolderKanban,
-  Gauge, LayoutDashboard, LifeBuoy, Menu, MessageSquare, MoreHorizontal,
-  Package, Plus, Search, Settings2, ShieldCheck, ShoppingBag, Smartphone,
-  Sparkles, Truck, Users, WalletCards, X, Zap, Building2, BriefcaseBusiness,
-  Shirt, HardDrive, CalendarClock
+  LayoutDashboard, Menu, MoreHorizontal,
+  Package, Plus, Search, Settings2, ShieldCheck, Smartphone,
+  Sparkles, Truck, Users, WalletCards, X, Zap, Building2,
+  HardDrive, CalendarClock
 } from 'lucide-react';
 
 const navGroups = [
@@ -49,8 +49,6 @@ const attentionItems = [
   { title: 'PO client manquant', subtitle: 'Coca-Cola · Sampling Week-end', tag: 'À relancer', icon: FileText, tone: 'rose' },
   { title: 'Dispatch à confirmer', subtitle: 'Samsung · 4 magasins', tag: 'Demain', icon: Truck, tone: 'blue' },
 ];
-
-const money = n => new Intl.NumberFormat('fr-MA', { style: 'currency', currency: 'MAD', maximumFractionDigits: 0 }).format(n);
 
 function App() {
   const [active, setActive] = useState('overview');
