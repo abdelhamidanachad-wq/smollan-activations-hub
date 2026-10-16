@@ -71,7 +71,7 @@ final class ProjectWorkflowService {
         $sup = $this->pdo->prepare("select supervisor_id::text from public.smollan_store_supervisors where store_id=cast(:store as uuid) order by is_primary desc,created_at asc limit 1");
         $sup->execute(['store'=>$storeId]);
         $supervisorId = $sup->fetchColumn() ?: null;
-        $link = $this->pdo->prepare("insert into public.smollan_project_stores(project_id,store_id,supervisor_id) values(cast(:project as uuid),cast(:store as uuid),cast(:supervisor as uuid)) on conflict(project_id,store_id) do update set supervisor_id=coalesce(public.smollan_project_stores.supervisor_id,excluded.supervisor_id)");
+        $link = $this->pdo->prepare("insert into public.smollan_project_stores as current_link(project_id,store_id,supervisor_id) values(cast(:project as uuid),cast(:store as uuid),cast(:supervisor as uuid)) on conflict(project_id,store_id) do update set supervisor_id=coalesce(current_link.supervisor_id,excluded.supervisor_id)");
         $link->execute(['project'=>$projectId,'store'=>$storeId,'supervisor'=>$supervisorId]);
         if ($supervisorId) {
             $projectSup = $this->pdo->prepare("insert into public.smollan_project_supervisors(project_id,supervisor_id) values(cast(:project as uuid),cast(:supervisor as uuid)) on conflict do nothing");
@@ -194,6 +194,54 @@ final class ProjectWorkflowService {
         $this->pdo->prepare("update public.smollan_attendance_links set revoked_at=now() where id=cast(:id as uuid)")->execute(['id'=>$link['link_id']]);
     }
 
+
+    public function mapSupervisorToStore(string $storeId, string $supervisorId, bool $primary=true): void {
+        if (!Auth::can('platform_admin','leadership','activation_coordinator','field_manager')) throw new RuntimeException('Your role cannot map store supervisors.');
+        $this->pdo->beginTransaction();
+        try {
+            $q=$this->pdo->prepare("insert into public.smollan_store_supervisors(store_id,supervisor_id,is_primary) values(cast(:store as uuid),cast(:supervisor as uuid),:primary) on conflict(store_id,supervisor_id) do update set is_primary=excluded.is_primary");
+            $q->execute(['store'=>$storeId,'supervisor'=>$supervisorId,'primary'=>$primary]);
+            if ($primary) {
+                $this->pdo->prepare("update public.smollan_store_supervisors set is_primary=false where store_id=cast(:store as uuid) and supervisor_id<>cast(:supervisor as uuid)")->execute(['store'=>$storeId,'supervisor'=>$supervisorId]);
+                $this->pdo->prepare("update public.smollan_project_stores set supervisor_id=cast(:supervisor as uuid) where store_id=cast(:store as uuid)")->execute(['store'=>$storeId,'supervisor'=>$supervisorId]);
+                $this->pdo->prepare("insert into public.smollan_project_supervisors(project_id,supervisor_id) select distinct project_id,cast(:supervisor as uuid) from public.smollan_project_stores where store_id=cast(:store as uuid) on conflict do nothing")->execute(['store'=>$storeId,'supervisor'=>$supervisorId]);
+            }
+            Audit::record($this->pdo,'map','store_supervisor',$storeId,'Supervisor mapped to store',['supervisor_id'=>$supervisorId,'primary'=>$primary]);
+            $this->pdo->commit();
+        } catch (\Throwable $e) { if($this->pdo->inTransaction())$this->pdo->rollBack(); throw $e; }
+    }
+
+    public function invitePromoter(string $promoterId): void {
+        if (!Auth::can('platform_admin','leadership','activation_coordinator','field_manager','hr_coordinator')) throw new RuntimeException('Your role cannot invite promoter accounts.');
+        $base=rtrim((string)\Smollan\Support\Env::get('SUPABASE_URL',''),' /');
+        $serviceKey=(string)\Smollan\Support\Env::get('SUPABASE_SERVICE_ROLE_KEY','');
+        if ($base==='' || $serviceKey==='') throw new RuntimeException('Promoter account invitations need SUPABASE_SERVICE_ROLE_KEY configured as a server-only secret on the PHP host. Never use this key in VITE_ variables.');
+        $q=$this->pdo->prepare("select id::text,full_name,email,user_id::text,status from public.smollan_promoters where id=cast(:id as uuid)");
+        $q->execute(['id'=>$promoterId]); $p=$q->fetch(PDO::FETCH_ASSOC);
+        if (!$p || empty($p['email']) || !filter_var($p['email'],FILTER_VALIDATE_EMAIL)) throw new RuntimeException('Add a valid email to this promoter profile before sending an invite.');
+        if (!empty($p['user_id'])) throw new RuntimeException('This promoter already has a login account linked.');
+        if (($p['status']??'')==='Inactive') throw new RuntimeException('Inactive promoters cannot be invited.');
+        $payload=json_encode(['email'=>strtolower($p['email']),'data'=>['display_name'=>$p['full_name'],'account_type'=>'promoter']],JSON_THROW_ON_ERROR);
+        $endpoint=$base.'/auth/v1/invite';
+        $headers=['Content-Type: application/json','apikey: '.$serviceKey,'Authorization: Bearer '.$serviceKey,'Accept: application/json'];
+        if (function_exists('curl_init')) {
+            $ch=curl_init($endpoint);
+            curl_setopt_array($ch,[CURLOPT_POST=>true,CURLOPT_POSTFIELDS=>$payload,CURLOPT_HTTPHEADER=>$headers,CURLOPT_RETURNTRANSFER=>true,CURLOPT_CONNECTTIMEOUT=>8,CURLOPT_TIMEOUT=>20,CURLOPT_SSL_VERIFYPEER=>true,CURLOPT_SSL_VERIFYHOST=>2]);
+            $raw=curl_exec($ch);$status=(int)curl_getinfo($ch,CURLINFO_RESPONSE_CODE);$err=curl_error($ch);curl_close($ch);
+            if($raw===false)throw new RuntimeException('Supabase invitation request failed: '.$err);
+        } else {
+            $ctx=stream_context_create(['http'=>['method'=>'POST','header'=>implode("\r\n",$headers),'content'=>$payload,'timeout'=>20,'ignore_errors'=>true],'ssl'=>['verify_peer'=>true,'verify_peer_name'=>true]]);
+            $raw=@file_get_contents($endpoint,false,$ctx);$status=0;foreach(($http_response_header??[]) as $header)if(preg_match('#^HTTP/\\S+\\s+(\\d{3})#',$header,$m))$status=(int)$m[1];
+            if($raw===false)throw new RuntimeException('Could not reach Supabase Auth. Enable PHP cURL or outbound HTTPS.');
+        }
+        $response=json_decode((string)$raw,true);
+        if($status<200||$status>=300||empty($response['id'])) {
+            $message=is_array($response)?(string)($response['msg']??$response['message']??'Supabase Auth rejected the invitation.'):'Supabase Auth rejected the invitation.';
+            throw new RuntimeException($message);
+        }
+        $this->pdo->prepare("update public.smollan_promoters set user_id=cast(:user as uuid),updated_at=now() where id=cast(:id as uuid)")->execute(['user'=>$response['id'],'id'=>$promoterId]);
+        Audit::record($this->pdo,'invite','promoter',$promoterId,'Promoter login invitation sent',['auth_user_id'=>$response['id']]);
+    }
     public function createProjectItem(string $module, array $data): string {
         $this->requireManager();
         $projectId=trim((string)($data['project_id']??''));
