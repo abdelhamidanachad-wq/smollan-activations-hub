@@ -42,9 +42,9 @@ final class ProjectWorkflowService {
             $id = null;
             for ($attempt=0; $attempt<3; $attempt++) {
                 $code = 'SM-' . date('ym') . '-' . strtoupper(bin2hex(random_bytes(3)));
-                $stmt = $this->pdo->prepare("insert into public.smollan_projects(code,client_id,name,service_type,cadence,status,start_date,end_date,cities,budget,currency,created_by,owner_id) values(:code,cast(:client as uuid),:name,cast(:service as public.project_service_type),cast(:cadence as public.project_cadence),cast(:status as public.project_status),:start,:end,string_to_array(:cities,','),:budget,'MAD',cast(:actor as uuid),cast(:actor as uuid)) returning id::text");
+                $stmt = $this->pdo->prepare("insert into public.smollan_projects(code,client_id,name,service_type,cadence,status,start_date,end_date,cities,budget,currency,created_by,owner_id) values(:code,cast(:client as uuid),:name,cast(:service as public.project_service_type),cast(:cadence as public.project_cadence),cast(:status as public.project_status),:start,:end,string_to_array(:cities,','),:budget,'MAD',cast(:created_by as uuid),cast(:owner_id as uuid)) returning id::text");
                 try {
-                    $stmt->execute(['code'=>$code,'client'=>$clientId,'name'=>$name,'service'=>$serviceType,'cadence'=>in_array(($data['cadence']??'none'),['VSD','SD','none'],true)?$data['cadence']:'none','status'=>'planning','start'=>$start,'end'=>$end,'cities'=>$cities,'budget'=>$budget,'actor'=>Auth::user()['id']]);
+                    $stmt->execute(['code'=>$code,'client'=>$clientId,'name'=>$name,'service'=>$serviceType,'cadence'=>in_array(($data['cadence']??'none'),['VSD','SD','none'],true)?$data['cadence']:'none','status'=>'planning','start'=>$start,'end'=>$end,'cities'=>$cities,'budget'=>$budget,'created_by'=>Auth::user()['id'],'owner_id'=>Auth::user()['id']]);
                     $id = (string)$stmt->fetchColumn();
                     break;
                 } catch (\PDOException $e) {
@@ -189,7 +189,7 @@ final class ProjectWorkflowService {
     public function checkInWithLink(string $token, ?string $photoRef=null): void {
         $link=$this->resolveAttendanceLink($token);
         if (!$link) throw new RuntimeException('This check-in link has expired or is no longer active.');
-        $q=$this->pdo->prepare("insert into public.smollan_attendance(assignment_id,promoter_id,project_id,store_id,attendance_date,status,check_in,source,photo_ref,validation_status) select a.id,a.promoter_id,a.project_id,a.store_id,current_date,'Present',now(),'Check-in Link',:photo,'Pending' from public.smollan_assignments a where a.id=cast(:assignment as uuid) on conflict(assignment_id,attendance_date) do update set check_in=coalesce(public.smollan_attendance.check_in,excluded.check_in),source='Check-in Link',photo_ref=coalesce(excluded.photo_ref,public.smollan_attendance.photo_ref),updated_at=now()");
+        $q=$this->pdo->prepare("insert into public.smollan_attendance as current_attendance(assignment_id,promoter_id,project_id,store_id,attendance_date,status,check_in,source,photo_ref,validation_status) select a.id,a.promoter_id,a.project_id,a.store_id,current_date,'Present',now(),'Check-in Link',:photo,'Pending' from public.smollan_assignments a where a.id=cast(:assignment as uuid) on conflict(assignment_id,attendance_date) do update set check_in=coalesce(current_attendance.check_in,excluded.check_in),source='Check-in Link',photo_ref=coalesce(excluded.photo_ref,current_attendance.photo_ref),updated_at=now()");
         $q->execute(['photo'=>$photoRef,'assignment'=>$link['assignment_id']]);
         $this->pdo->prepare("update public.smollan_attendance_links set revoked_at=now() where id=cast(:id as uuid)")->execute(['id'=>$link['link_id']]);
     }
