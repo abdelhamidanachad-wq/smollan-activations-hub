@@ -14,6 +14,8 @@ from public.smollan_project_stores
 where supervisor_id is not null
 on conflict (store_id, supervisor_id) do nothing;
 
+alter table public.smollan_uniform_skus add column if not exists project_id uuid references public.smollan_projects(id) on delete cascade;
+
 create table if not exists public.smollan_project_modules (
   project_id uuid not null references public.smollan_projects(id) on delete cascade,
   module_key text not null check (module_key in ('goodies','plv','uniforms')),
