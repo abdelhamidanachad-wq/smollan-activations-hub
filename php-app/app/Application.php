@@ -17,10 +17,14 @@ final class Application {
   $route=trim($path,'/');
   if(preg_match('#^reports/share/([A-Za-z0-9_-]{30,})$#',$route,$m)){$this->publicReport($pdo,$m[1]);return;}
   if(preg_match('#^checkin/([A-Za-z0-9_-]{30,})$#',$route,$m)){if(Http::method()==='POST'){$this->publicCheckIn($pdo,$m[1]);return;}$this->publicCheckInPage($pdo,$m[1]);return;}
-  if(!Auth::user())Http::redirect('/login');\n  if((Auth::membership()['role']??'')==='promoter'&&!in_array($route,['portal','attendance/check-in','attendance/check-out'],true))Http::redirect('/portal');\n  if($route==='portal'){$this->promoterPortal($pdo);return;}
+  if(!Auth::user())Http::redirect('/login');
+  if((Auth::membership()['role']??'')==='promoter'&&!in_array($route,['portal','attendance/check-in','attendance/check-out'],true))Http::redirect('/portal');
+  if($route==='portal'){$this->promoterPortal($pdo);return;}
   if($route===''||$route==='overview'){Policy::requireModule('overview');$this->overview($pdo);return;}
   if($route==='project/create'&&Http::method()==='POST'){$this->createProject($pdo);return;}
-  if($route==='promoter/create'&&Http::method()==='POST'){$this->createPromoter($pdo);return;}\n  if(preg_match('#^promoter/([0-9a-f-]{36})/invite$#i',$route,$m)&&Http::method()==='POST'){$this->invitePromoter($pdo,$m[1]);return;}\n  if($route==='store-supervisor/create'&&Http::method()==='POST'){$this->mapStoreSupervisor($pdo);return;}
+  if($route==='promoter/create'&&Http::method()==='POST'){$this->createPromoter($pdo);return;}
+  if(preg_match('#^promoter/([0-9a-f-]{36})/invite$#i',$route,$m)&&Http::method()==='POST'){$this->invitePromoter($pdo,$m[1]);return;}
+  if($route==='store-supervisor/create'&&Http::method()==='POST'){$this->mapStoreSupervisor($pdo);return;}
   if(preg_match('#^project/([0-9a-f-]{36})/(store|assignment|report)$#i',$route,$m)&&Http::method()==='POST'){$this->projectAction($pdo,$m[1],$m[2]);return;}
   if(preg_match('#^assignment/([0-9a-f-]{36})/checkin-link$#i',$route,$m)&&Http::method()==='POST'){$this->createCheckInLink($pdo,$m[1]);return;}
   if(preg_match('#^report/([0-9a-f-]{36})/share$#i',$route,$m)&&Http::method()==='POST'){$this->createReportShare($pdo,$m[1]);return;}
