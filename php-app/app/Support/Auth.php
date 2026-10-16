@@ -12,7 +12,7 @@ final class Auth {
 
     public static function login(PDO $pdo, string $email, string $password): bool {
         $email = strtolower(trim($email));
-        if (!filter_var($email, FILTER_VALIDATE_EMAIL) || !str_ends_with($email, '@smollan.com')) return false;
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) return false;
 
         $baseUrl = rtrim((string)Env::get('SUPABASE_URL', 'https://ddrohraarhdbwamwnmnu.supabase.co'), '/');
         $apiKey = Env::get('SUPABASE_PUBLISHABLE_KEY');
@@ -59,17 +59,25 @@ final class Auth {
 
         $userId = (string)$response['user']['id'];
         $verifiedEmail = strtolower((string)($response['user']['email'] ?? ''));
-        if ($verifiedEmail !== $email || !str_ends_with($verifiedEmail, '@smollan.com')) return false;
+        if ($verifiedEmail !== $email) return false;
 
         $stmt = $pdo->prepare('select user_id::text as user_id, email, display_name, role::text as role, is_active from public.smollan_memberships where user_id = cast(:id as uuid) limit 1');
         $stmt->execute(['id'=>$userId]);
         $membership = $stmt->fetch(PDO::FETCH_ASSOC);
         $active = $membership && in_array($membership['is_active'] ?? false, [true, 't', 'true', 1, '1'], true);
-        if (!$membership || !$active || strtolower((string)$membership['email']) !== $verifiedEmail) return false;
-
+        if ($membership && $active && strtolower((string)$membership['email']) === $verifiedEmail && str_ends_with($verifiedEmail, '@smollan.com')) {
+            session_regenerate_id(true);
+            $_SESSION['user'] = ['id'=>$userId, 'email'=>$verifiedEmail];
+            $_SESSION['membership'] = $membership;
+            return true;
+        }
+        $promoter = $pdo->prepare("select id::text as promoter_id,full_name,email,status from public.smollan_promoters where user_id=cast(:id as uuid) and lower(email)=:email and status <> 'Inactive' limit 1");
+        $promoter->execute(['id'=>$userId,'email'=>$verifiedEmail]);
+        $profile = $promoter->fetch(PDO::FETCH_ASSOC);
+        if (!$profile) return false;
         session_regenerate_id(true);
-        $_SESSION['user'] = ['id'=>$userId, 'email'=>$verifiedEmail];
-        $_SESSION['membership'] = $membership;
+        $_SESSION['user'] = ['id'=>$userId, 'email'=>$verifiedEmail, 'promoter_id'=>$profile['promoter_id']];
+        $_SESSION['membership'] = ['user_id'=>$userId,'email'=>$verifiedEmail,'display_name'=>$profile['full_name'],'role'=>'promoter','is_active'=>true];
         return true;
     }
 
