@@ -8,11 +8,20 @@ create table if not exists public.smollan_store_supervisors (
 );
 
 -- Seed supervisor/store relationships from the historical project-store assignments.
+with ranked_supervisors as (
+  select store_id, supervisor_id,
+         row_number() over (partition by store_id order by count(*) desc, supervisor_id) as rn
+  from public.smollan_project_stores
+  where supervisor_id is not null
+  group by store_id, supervisor_id
+)
 insert into public.smollan_store_supervisors(store_id, supervisor_id, is_primary)
-select distinct on (store_id, supervisor_id) store_id, supervisor_id, true
-from public.smollan_project_stores
-where supervisor_id is not null
-on conflict (store_id, supervisor_id) do nothing;
+select store_id, supervisor_id, rn=1
+from ranked_supervisors
+on conflict (store_id, supervisor_id) do update set is_primary=excluded.is_primary;
+
+create unique index if not exists smollan_store_supervisors_one_primary_idx
+  on public.smollan_store_supervisors(store_id) where is_primary;
 
 alter table public.smollan_uniform_skus add column if not exists project_id uuid references public.smollan_projects(id) on delete cascade;
 
