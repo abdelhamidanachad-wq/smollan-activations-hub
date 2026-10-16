@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 namespace Smollan\App;
-use PDO; use Smollan\Repositories\OperationsRepository; use Smollan\Services\WorkflowService; use Smollan\Services\ProjectWorkflowService; use Smollan\Support\Auth; use Smollan\Support\Csrf; use Smollan\Support\Database; use Smollan\Support\Env; use Smollan\Support\Http; use Smollan\Support\Policy; use Throwable;
+use PDO; use Smollan\Repositories\OperationsRepository; use Smollan\Services\WorkflowService; use Smollan\Services\ProjectWorkflowService; use Smollan\Support\Auth; use Smollan\Support\Csrf; use Smollan\Support\Database; use Smollan\Support\Env; use Smollan\Support\Http; use Smollan\Support\Policy; use Throwable; use RuntimeException;
 final class Application {
  private ?PDO $pdo=null; private ?string $dbError=null;
  private function db():?PDO {if($this->pdo)return $this->pdo;try{return $this->pdo=Database::connection();}catch(Throwable $e){$this->dbError=$e->getMessage();return null;}}
