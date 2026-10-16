@@ -101,16 +101,16 @@ for select to authenticated using (
 );
 create policy "coordinators manage project reports" on public.smollan_project_reports
 for all to authenticated using (
-  exists(select 1 from public.smollan_memberships m where m.user_id=auth.uid() and m.is_active and m.role in ('platform_admin','leadership','activation_coordinator','field_manager','client_services'))
+  exists(select 1 from public.smollan_memberships m where m.user_id=auth.uid() and m.is_active and m.role in ('platform_admin','leadership','activation_coordinator','field_manager','field_operations'))
 ) with check (
-  created_by=auth.uid() and exists(select 1 from public.smollan_memberships m where m.user_id=auth.uid() and m.is_active and m.role in ('platform_admin','leadership','activation_coordinator','field_manager','client_services'))
+  created_by=auth.uid() and exists(select 1 from public.smollan_memberships m where m.user_id=auth.uid() and m.is_active and m.role in ('platform_admin','leadership','activation_coordinator','field_manager','field_operations'))
 );
 
 create policy "active members manage report share links" on public.smollan_report_share_links
 for all to authenticated using (
-  exists(select 1 from public.smollan_memberships m where m.user_id=auth.uid() and m.is_active and m.role in ('platform_admin','leadership','activation_coordinator','field_manager','client_services'))
+  exists(select 1 from public.smollan_memberships m where m.user_id=auth.uid() and m.is_active and m.role in ('platform_admin','leadership','activation_coordinator','field_manager','field_operations'))
 ) with check (
-  created_by=auth.uid() and exists(select 1 from public.smollan_memberships m where m.user_id=auth.uid() and m.is_active and m.role in ('platform_admin','leadership','activation_coordinator','field_manager','client_services'))
+  created_by=auth.uid() and exists(select 1 from public.smollan_memberships m where m.user_id=auth.uid() and m.is_active and m.role in ('platform_admin','leadership','activation_coordinator','field_manager','field_operations'))
 );
 
 create policy "active members manage attendance links" on public.smollan_attendance_links
