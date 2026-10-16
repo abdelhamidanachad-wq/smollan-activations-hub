@@ -12,7 +12,7 @@ final class ProjectWorkflowService {
     public function __construct(private PDO $pdo) {}
 
     private function requireManager(): void {
-        if (!Auth::can('platform_admin','leadership','activation_coordinator','field_manager','field_operations','supervisor','client_services')) {
+        if (!Auth::can('platform_admin','leadership','activation_coordinator','field_manager','field_operations','supervisor','field_operations')) {
             throw new RuntimeException('Your role cannot manage this project workflow.');
         }
     }
@@ -140,7 +140,7 @@ final class ProjectWorkflowService {
     }
 
     public function createReport(string $projectId, string $title, string $summary): string {
-        if (!Auth::can('platform_admin','leadership','activation_coordinator','field_manager','client_services')) throw new RuntimeException('Your role cannot publish client reports.');
+        if (!Auth::can('platform_admin','leadership','activation_coordinator','field_manager','field_operations')) throw new RuntimeException('Your role cannot publish client reports.');
         $title=trim($title); if (mb_strlen($title)<2) throw new RuntimeException('Report title must contain at least two characters.');
         $metrics=[];
         foreach ([
@@ -156,7 +156,7 @@ final class ProjectWorkflowService {
     }
 
     public function createReportShare(string $reportId): string {
-        if (!Auth::can('platform_admin','leadership','activation_coordinator','field_manager','client_services')) throw new RuntimeException('Your role cannot share client reports.');
+        if (!Auth::can('platform_admin','leadership','activation_coordinator','field_manager','field_operations')) throw new RuntimeException('Your role cannot share client reports.');
         $token=rtrim(strtr(base64_encode(random_bytes(32)),'+/','-_'),'=');
         $stmt=$this->pdo->prepare("insert into public.smollan_report_share_links(report_id,token_hash,expires_at,created_by) select id,:hash,now()+interval '30 days',cast(:actor as uuid) from public.smollan_project_reports where id=cast(:id as uuid) returning id::text");
         $stmt->execute(['hash'=>hash('sha256',$token),'actor'=>Auth::user()['id'],'id'=>$reportId]);
