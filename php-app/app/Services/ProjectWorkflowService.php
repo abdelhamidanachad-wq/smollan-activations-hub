@@ -193,4 +193,29 @@ final class ProjectWorkflowService {
         $q->execute(['photo'=>$photoRef,'assignment'=>$link['assignment_id']]);
         $this->pdo->prepare("update public.smollan_attendance_links set revoked_at=now() where id=cast(:id as uuid)")->execute(['id'=>$link['link_id']]);
     }
+
+    public function createProjectItem(string $module, array $data): string {
+        $this->requireManager();
+        $projectId=trim((string)($data['project_id']??''));
+        $name=trim((string)($data['name']??''));
+        if ($projectId==='' || $name==='') throw new RuntimeException('Choose a project and enter an item name.');
+        if (!in_array($module,['goodies','plv','uniforms'],true)) throw new RuntimeException('Unsupported project item type.');
+        $feature=$this->pdo->prepare("select enabled from public.smollan_project_modules where project_id=cast(:project as uuid) and module_key=:module");
+        $feature->execute(['project'=>$projectId,'module'=>$module]);
+        if (!in_array($feature->fetchColumn(),[true,'t','true',1,'1'],true)) throw new RuntimeException('Enable this module in the project configuration before adding items.');
+        if ($module==='goodies') {
+            $q=$this->pdo->prepare("insert into public.smollan_gifts(project_id,name,category,source,total_quantity,unit_value,status,description) values(cast(:project as uuid),:name,:category,:source,:qty,:cost,:status,:description) returning id::text");
+            $q->execute(['project'=>$projectId,'name'=>$name,'category'=>trim((string)($data['category']??''))?:null,'source'=>trim((string)($data['source']??''))?:null,'qty'=>max(0,(int)($data['quantity']??0)),'cost'=>max(0,(float)($data['unit_cost']??0)),'status'=>trim((string)($data['status']??'Planning'))?:'Planning','description'=>trim((string)($data['description']??''))?:null]);
+        } elseif ($module==='plv') {
+            $q=$this->pdo->prepare("insert into public.smollan_plv_materials(project_id,name,material_type,production_source,total_quantity,unit_cost,production_status,production_deadline,status,description) values(cast(:project as uuid),:name,:type,:source,:qty,:cost,:production_status,:deadline,:status,:description) returning id::text");
+            $q->execute(['project'=>$projectId,'name'=>$name,'type'=>trim((string)($data['material_type']??''))?:'Other','source'=>trim((string)($data['source']??''))?:null,'qty'=>max(0,(int)($data['quantity']??0)),'cost'=>max(0,(float)($data['unit_cost']??0)),'production_status'=>trim((string)($data['status']??'Planning'))?:'Planning','deadline'=>trim((string)($data['deadline']??''))?:null,'status'=>trim((string)($data['status']??'Planning'))?:'Planning','description'=>trim((string)($data['description']??''))?:null]);
+        } else {
+            $sku=trim((string)($data['sku']??'')); if($sku==='') throw new RuntimeException('A unique SKU is required for uniform items.');
+            $q=$this->pdo->prepare("insert into public.smollan_uniform_skus(project_id,sku,name,size,color,quantity_on_hand,reorder_level,unit_cost,status,notes,created_by) values(cast(:project as uuid),:sku,:name,:size,:color,:qty,:reorder,:cost,'active',:notes,cast(:actor as uuid)) returning id::text");
+            $q->execute(['project'=>$projectId,'sku'=>$sku,'name'=>$name,'size'=>trim((string)($data['size']??''))?:null,'color'=>trim((string)($data['color']??''))?:null,'qty'=>max(0,(int)($data['quantity']??0)),'reorder'=>max(0,(int)($data['reorder_level']??0)),'cost'=>max(0,(float)($data['unit_cost']??0)),'notes'=>trim((string)($data['description']??''))?:null,'actor'=>Auth::user()['id']]);
+        }
+        $id=(string)$q->fetchColumn();
+        Audit::record($this->pdo,'create','project_item',$id,'Project item created',['project_id'=>$projectId,'module'=>$module]);
+        return $id;
+    }
 }
