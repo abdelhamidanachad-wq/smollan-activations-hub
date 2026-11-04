@@ -71,7 +71,7 @@ final class ProjectWorkflowService {
             if($start&&$end&&$days){
                 $storesForCalendar=$storeIds?:[null];
                 $calendar=$this->pdo->prepare("insert into public.smollan_project_working_days(project_id,store_id,work_date,is_activation_day,created_by) values(cast(:project as uuid),cast(:store as uuid),:work_date,true,cast(:actor as uuid)) on conflict do nothing");
-                $cursor=new \\DateTimeImmutable($start);$last=new \\DateTimeImmutable($end);
+                $cursor=new \DateTimeImmutable($start);$last=new \DateTimeImmutable($end);
                 if($last->diff($cursor)->days>730)throw new RuntimeException('Project planning range cannot exceed two years.');
                 while($cursor<=$last){if(in_array((int)$cursor->format('N'),$days,true)){foreach($storesForCalendar as $storeIdForDay)$calendar->execute(['project'=>$id,'store'=>$storeIdForDay,'work_date'=>$cursor->format('Y-m-d'),'actor'=>Auth::user()['id']]);}$cursor=$cursor->modify('+1 day');}
             }
