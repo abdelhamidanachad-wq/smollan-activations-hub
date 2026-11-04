@@ -222,7 +222,7 @@ final class ProjectWorkflowService {
     }
 
     public function resolveAttendanceLink(string $token): ?array {
-        $q=$this->pdo->prepare("select l.id::text as link_id,a.id::text as assignment_id,p.full_name,pr.name as project_name,s.name as store_name,l.expires_at from public.smollan_attendance_links l join public.smollan_assignments a on a.id=l.assignment_id join public.smollan_promoters p on p.id=a.promoter_id join public.smollan_projects pr on pr.id=a.project_id join public.smollan_stores s on s.id=a.store_id where l.token_hash=:hash and l.revoked_at is null and l.expires_at>now() and a.status='Active' and a.start_date<=current_date and (a.end_date is null or a.end_date>=current_date)");
+        $q=$this->pdo->prepare("select l.id::text as link_id,a.id::text as assignment_id,p.full_name,pr.name as project_name,pr.brand_color,c.logo_url as client_logo_url,c.background_url as client_background_url,s.name as store_name,l.expires_at from public.smollan_attendance_links l join public.smollan_assignments a on a.id=l.assignment_id join public.smollan_promoters p on p.id=a.promoter_id join public.smollan_projects pr on pr.id=a.project_id join public.smollan_clients c on c.id=pr.client_id join public.smollan_stores s on s.id=a.store_id where l.token_hash=:hash and l.revoked_at is null and l.expires_at>now() and a.status='Active' and a.start_date<=current_date and (a.end_date is null or a.end_date>=current_date)");
         $q->execute(['hash'=>hash('sha256',$token)]); return $q->fetch(PDO::FETCH_ASSOC) ?: null;
     }
 
