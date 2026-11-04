@@ -130,6 +130,27 @@ final class ProjectWorkflowService {
         } catch (\Throwable $e) { if($this->pdo->inTransaction())$this->pdo->rollBack(); throw $e; }
     }
 
+    public function updateClientBranding(array $data): void {
+        if (!Auth::can('platform_admin')) throw new RuntimeException('Only the Super Admin can edit client branding and contact settings.');
+        $clientId=trim((string)($data['client_id']??''));
+        if (!preg_match('/^[0-9a-f-]{36}$/i',$clientId)) throw new RuntimeException('Choose a valid client.');
+        $color=strtoupper(trim((string)($data['brand_color']??'#2457A6')));
+        if (!preg_match('/^#[0-9A-F]{6}$/',$color)) throw new RuntimeException('Brand color must be a valid six-digit hex color.');
+        $logo=trim((string)($data['logo_url']??''))?:null;
+        $background=trim((string)($data['background_url']??''))?:null;
+        foreach (['logo'=>$logo,'background'=>$background] as $label=>$url) if ($url!==null && (!filter_var($url,FILTER_VALIDATE_URL) || !in_array(strtolower((string)parse_url($url,PHP_URL_SCHEME)),['https'],true))) throw new RuntimeException(ucfirst($label).' must be an HTTPS URL.');
+        $roles=['trade_marketing'=>'Trade Marketing','procurement'=>'Procurement','field'=>'Field','direction_commerciale'=>'Direction Commerciale'];
+        $contacts=[];
+        foreach($roles as $key=>$label){
+            $contacts[$key]=['label'=>$label,'name'=>trim((string)($data[$key.'_name']??''))?:null,'email'=>strtolower(trim((string)($data[$key.'_email']??'')))?:null,'phone'=>trim((string)($data[$key.'_phone']??''))?:null];
+            if($contacts[$key]['email']!==null && !filter_var($contacts[$key]['email'],FILTER_VALIDATE_EMAIL)) throw new RuntimeException('Enter a valid email for '.$label.'.');
+        }
+        $q=$this->pdo->prepare("update public.smollan_clients set logo_url=:logo,background_url=:background,brand_color=:color,contact_directory=cast(:contacts as jsonb),updated_at=now() where id=cast(:id as uuid)");
+        $q->execute(['logo'=>$logo,'background'=>$background,'color'=>$color,'contacts'=>json_encode($contacts,JSON_THROW_ON_ERROR),'id'=>$clientId]);
+        if($q->rowCount()!==1) throw new RuntimeException('Client not found.');
+        Audit::record($this->pdo,'update','client',$clientId,'Client brand and contacts updated',['contact_roles'=>array_keys($roles)]);
+    }
+
     public function createPromoter(array $data): string {
         if (!Auth::can('platform_admin','leadership','activation_coordinator','field_manager','hr_coordinator')) throw new RuntimeException('Your role cannot create promoters.');
         $name=trim((string)($data['full_name']??''));
