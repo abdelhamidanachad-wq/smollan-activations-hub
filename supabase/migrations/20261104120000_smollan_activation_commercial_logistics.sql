@@ -353,11 +353,11 @@ alter table public.smollan_finance_exchange_batches enable row level security;
 revoke all on public.smollan_supplier_followups,public.smollan_client_po_requests,public.smollan_external_integrations,public.smollan_finance_exchange_batches from anon,authenticated;
 grant select,insert,update,delete on public.smollan_supplier_followups,public.smollan_client_po_requests,public.smollan_external_integrations,public.smollan_finance_exchange_batches to authenticated;
 create policy "active procurement finance access" on public.smollan_supplier_followups for all to authenticated
-using (exists(select 1 from public.smollan_memberships m where m.user_id=auth.uid() and m.is_active and m.role in ('platform_admin','leadership','activation_coordinator','finance','procurement')))
-with check (exists(select 1 from public.smollan_memberships m where m.user_id=auth.uid() and m.is_active and m.role in ('platform_admin','leadership','activation_coordinator','finance','procurement')));
+using (exists(select 1 from public.smollan_memberships m where m.user_id=auth.uid() and m.is_active and m.role in ('platform_admin','leadership','activation_coordinator','finance','procurement_production')))
+with check (exists(select 1 from public.smollan_memberships m where m.user_id=auth.uid() and m.is_active and m.role in ('platform_admin','leadership','activation_coordinator','finance','procurement_production')));
 create policy "active procurement finance access client po" on public.smollan_client_po_requests for all to authenticated
-using (exists(select 1 from public.smollan_memberships m where m.user_id=auth.uid() and m.is_active and m.role in ('platform_admin','leadership','activation_coordinator','finance','procurement')))
-with check (exists(select 1 from public.smollan_memberships m where m.user_id=auth.uid() and m.is_active and m.role in ('platform_admin','leadership','activation_coordinator','finance','procurement')));
+using (exists(select 1 from public.smollan_memberships m where m.user_id=auth.uid() and m.is_active and m.role in ('platform_admin','leadership','activation_coordinator','finance','procurement_production')))
+with check (exists(select 1 from public.smollan_memberships m where m.user_id=auth.uid() and m.is_active and m.role in ('platform_admin','leadership','activation_coordinator','finance','procurement_production')));
 create policy "platform admins manage integrations" on public.smollan_external_integrations for all to authenticated
 using (exists(select 1 from public.smollan_memberships m where m.user_id=auth.uid() and m.is_active and m.role in ('platform_admin','leadership')))
 with check (exists(select 1 from public.smollan_memberships m where m.user_id=auth.uid() and m.is_active and m.role in ('platform_admin','leadership')));
