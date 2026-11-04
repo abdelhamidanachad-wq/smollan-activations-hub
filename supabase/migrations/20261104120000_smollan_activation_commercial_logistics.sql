@@ -289,3 +289,78 @@ do $$ declare t text; begin
   execute format('create policy %I on public.%I for all to authenticated using (exists(select 1 from public.smollan_memberships m where m.user_id=auth.uid() and m.is_active)) with check (exists(select 1 from public.smollan_memberships m where m.user_id=auth.uid() and m.is_active))', 'active_member_access_'||t,t);
  end loop;
 end $$;
+
+-- Commercial follow-up, client PO intake and finance-system exchange metadata.
+create table if not exists public.smollan_supplier_followups (
+ id uuid primary key default gen_random_uuid(),
+ supplier_quotation_id uuid not null references public.smollan_supplier_quotations(id) on delete cascade,
+ followup_type text not null check(followup_type in ('request_sent','reminder','quotation_received','clarification','negotiation','selected','rejected')),
+ occurred_at timestamptz not null default now(),
+ next_followup_at timestamptz,
+ contact_name text,
+ contact_channel text,
+ notes text,
+ created_by uuid references auth.users(id)
+);
+create table if not exists public.smollan_client_po_requests (
+ id uuid primary key default gen_random_uuid(),
+ project_id uuid not null references public.smollan_projects(id) on delete cascade,
+ client_id uuid not null references public.smollan_clients(id),
+ quotation_id uuid references public.smollan_client_quotations(id),
+ request_number text not null unique,
+ requested_at timestamptz not null default now(),
+ expected_by date,
+ received_po_number text,
+ received_at timestamptz,
+ attachment_ref text,
+ status text not null default 'draft' check(status in ('draft','sent_to_client','reminder_due','received','rejected','cancelled')),
+ notes text,
+ created_by uuid references auth.users(id)
+);
+create table if not exists public.smollan_external_integrations (
+ id uuid primary key default gen_random_uuid(),
+ provider text not null check(provider in ('sage','google_maps','email','whatsapp','other')),
+ display_name text not null,
+ is_enabled boolean not null default false,
+ secret_env_name text,
+ config jsonb not null default '{}'::jsonb,
+ last_tested_at timestamptz,
+ last_test_status text,
+ created_at timestamptz not null default now(),
+ updated_at timestamptz not null default now(),
+ unique(provider,display_name)
+);
+create table if not exists public.smollan_finance_exchange_batches (
+ id uuid primary key default gen_random_uuid(),
+ provider text not null default 'sage' check(provider in ('sage','excel','other')),
+ direction text not null check(direction in ('import','export')),
+ entity_type text not null check(entity_type in ('suppliers','supplier_invoices','client_invoices','payments','payroll','purchase_orders','chart_of_accounts','other')),
+ file_ref text,
+ status text not null default 'prepared' check(status in ('prepared','processing','completed','failed','partially_completed')),
+ row_count integer not null default 0 check(row_count>=0),
+ success_count integer not null default 0 check(success_count>=0),
+ error_count integer not null default 0 check(error_count>=0),
+ mapping jsonb not null default '{}'::jsonb,
+ error_report_ref text,
+ created_by uuid references auth.users(id),
+ created_at timestamptz not null default now(),
+ completed_at timestamptz
+);
+alter table public.smollan_supplier_followups enable row level security;
+alter table public.smollan_client_po_requests enable row level security;
+alter table public.smollan_external_integrations enable row level security;
+alter table public.smollan_finance_exchange_batches enable row level security;
+revoke all on public.smollan_supplier_followups,public.smollan_client_po_requests,public.smollan_external_integrations,public.smollan_finance_exchange_batches from anon,authenticated;
+grant select,insert,update,delete on public.smollan_supplier_followups,public.smollan_client_po_requests,public.smollan_external_integrations,public.smollan_finance_exchange_batches to authenticated;
+create policy "active procurement finance access" on public.smollan_supplier_followups for all to authenticated
+using (exists(select 1 from public.smollan_memberships m where m.user_id=auth.uid() and m.is_active and m.role in ('platform_admin','leadership','activation_coordinator','finance','procurement')))
+with check (exists(select 1 from public.smollan_memberships m where m.user_id=auth.uid() and m.is_active and m.role in ('platform_admin','leadership','activation_coordinator','finance','procurement')));
+create policy "active procurement finance access client po" on public.smollan_client_po_requests for all to authenticated
+using (exists(select 1 from public.smollan_memberships m where m.user_id=auth.uid() and m.is_active and m.role in ('platform_admin','leadership','activation_coordinator','finance','procurement')))
+with check (exists(select 1 from public.smollan_memberships m where m.user_id=auth.uid() and m.is_active and m.role in ('platform_admin','leadership','activation_coordinator','finance','procurement')));
+create policy "platform admins manage integrations" on public.smollan_external_integrations for all to authenticated
+using (exists(select 1 from public.smollan_memberships m where m.user_id=auth.uid() and m.is_active and m.role in ('platform_admin','leadership')))
+with check (exists(select 1 from public.smollan_memberships m where m.user_id=auth.uid() and m.is_active and m.role in ('platform_admin','leadership')));
+create policy "finance team manages exchange batches" on public.smollan_finance_exchange_batches for all to authenticated
+using (exists(select 1 from public.smollan_memberships m where m.user_id=auth.uid() and m.is_active and m.role in ('platform_admin','leadership','finance')))
+with check (exists(select 1 from public.smollan_memberships m where m.user_id=auth.uid() and m.is_active and m.role in ('platform_admin','leadership','finance')));
