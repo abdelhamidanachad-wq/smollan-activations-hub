@@ -65,7 +65,7 @@ final class ProjectWorkflowService {
             if ($start && $end && $planning!=='none') {
                 $days = match($planning) {'VSD'=>[5,6,7],'SD'=>[6,7],'weekdays'=>[1,2,3,4,5],'daily'=>[1,2,3,4,5,6,7],'custom'=>$customDays,default=>[]};
                 $calendar = $this->pdo->prepare("insert into public.smollan_project_working_days(project_id,store_id,work_date,is_activation_day,planned_promoters,created_by) values(cast(:project as uuid),cast(:store as uuid),:work_date,true,0,cast(:actor as uuid)) on conflict(project_id,store_id,work_date) do nothing");
-                $cursor = new \\DateTimeImmutable($start); $last = new \\DateTimeImmutable($end);
+                $cursor = new \DateTimeImmutable($start); $last = new \DateTimeImmutable($end);
                 while ($cursor <= $last) {
                     if (in_array((int)$cursor->format('N'),$days,true)) {
                         $targets = $storeIds ?: [null];
