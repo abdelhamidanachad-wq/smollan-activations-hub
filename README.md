@@ -5,6 +5,7 @@ Project-centric operations workspace for retail marketing activations, field tea
 ## Rebuilt application
 This branch replaces the old promoters-only panel with a broader Smollan Hub workspace based on the supplied product brief:
 - Project portfolio and project operational hub with related-module navigation.
+- Executive board dashboard with Morocco / Algeria market panels, leadership directory and legacy workbook source visibility.
 - Promoters, supervisors, stores, assignments and attendance.
 - Resource requests and approval states.
 - Gifts & goodies and PLV/POSM tracking.
