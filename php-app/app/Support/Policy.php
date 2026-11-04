@@ -21,6 +21,7 @@ final class Policy {
         'resources'=>['platform_admin','leadership','activation_coordinator','field_operations','supervisor','hr_coordinator'],
         'finance'=>['platform_admin','leadership','finance'],
         'procurement'=>['platform_admin','leadership','procurement_production','finance'],
+        'dispatch'=>['platform_admin','leadership','activation_coordinator','field_operations','procurement_production','finance'],
         'integrations'=>['platform_admin','leadership'],
         'imports'=>['platform_admin','leadership','activation_coordinator','finance','hr_coordinator','procurement_production'],
     ];
