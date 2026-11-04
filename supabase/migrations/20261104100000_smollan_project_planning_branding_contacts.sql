@@ -17,7 +17,7 @@ create table if not exists public.smollan_client_contacts (
   notes text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
-  check (email is null or email ~* '^[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}$')
+  check (email is null or email ~* '^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$')
 );
 create index if not exists smollan_client_contacts_client_role_idx
   on public.smollan_client_contacts(client_id, contact_role, is_primary desc);
