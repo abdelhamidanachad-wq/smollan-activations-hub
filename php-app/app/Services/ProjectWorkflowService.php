@@ -145,7 +145,7 @@ final class ProjectWorkflowService {
     }
 
     public function projectData(string $projectId): array {
-        $q=$this->pdo->prepare("select p.id::text,p.code,p.name,p.status::text as status,p.service_type::text as service_type,p.start_date,p.end_date,p.cities,p.budget,p.currency,c.name as client_name from public.smollan_projects p join public.smollan_clients c on c.id=p.client_id where p.id=cast(:id as uuid)");
+        $q=$this->pdo->prepare("select p.id::text,p.code,p.name,p.status::text as status,p.service_type::text as service_type,p.start_date,p.end_date,p.cities,p.budget,p.currency,c.name as client_name,coalesce(ps.brand_color,c.brand_color,'#1D5D52') as brand_color,coalesce(ps.logo_url,c.logo_url) as logo_url,coalesce(ps.background_url,c.background_url) as background_url,coalesce(ps.planning_mode,'none') as planning_mode,coalesce(ps.operating_days,'{}'::smallint[]) as operating_days from public.smollan_projects p join public.smollan_clients c on c.id=p.client_id left join public.smollan_project_settings ps on ps.project_id=p.id where p.id=cast(:id as uuid)");
         $q->execute(['id'=>$projectId]); $project=$q->fetch(PDO::FETCH_ASSOC);
         if (!$project) throw new RuntimeException('Project not found.');
         $q=$this->pdo->prepare("select module_key,enabled from public.smollan_project_modules where project_id=cast(:id as uuid) order by module_key");
