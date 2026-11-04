@@ -37,14 +37,21 @@ final class ProjectWorkflowService {
         $cities = implode(',', array_values(array_unique(array_filter(array_map('trim', explode(',', (string)($data['cities'] ?? '')))))));
         $modules = array_values(array_intersect((array)($data['modules'] ?? []), ['goodies','plv','uniforms']));
         $storeIds = array_values(array_unique(array_filter((array)($data['store_ids'] ?? []), fn($x) => is_string($x) && preg_match('/^[0-9a-f-]{36}$/i', $x))));
+        $planning = (string)($data['planning_pattern'] ?? 'none');
+        $allowedPlanning = ['VSD','SD','weekdays','daily','custom','none'];
+        if (!in_array($planning, $allowedPlanning, true)) throw new RuntimeException('Choose a valid project planning pattern.');
+        $customDays = array_values(array_unique(array_filter(array_map('intval',(array)($data['planning_custom_days'] ?? [])),fn($day)=>$day>=1&&$day<=7)));
+        if ($planning==='custom' && !$customDays) throw new RuntimeException('Select at least one day for a custom planning pattern.');
+        $brandColor = strtoupper(trim((string)($data['brand_color'] ?? '#2457A6')));
+        if (!preg_match('/^#[0-9A-F]{6}$/',$brandColor)) throw new RuntimeException('Project color must be a valid six-digit hex color.');
         $this->pdo->beginTransaction();
         try {
             $id = null;
             for ($attempt=0; $attempt<3; $attempt++) {
                 $code = 'SM-' . date('ym') . '-' . strtoupper(bin2hex(random_bytes(3)));
-                $stmt = $this->pdo->prepare("insert into public.smollan_projects(code,client_id,name,service_type,cadence,status,start_date,end_date,cities,budget,currency,created_by,owner_id) values(:code,cast(:client as uuid),:name,cast(:service as public.project_service_type),cast(:cadence as public.project_cadence),cast(:status as public.project_status),:start,:end,string_to_array(:cities,','),:budget,'MAD',cast(:created_by as uuid),cast(:owner_id as uuid)) returning id::text");
+                $stmt = $this->pdo->prepare("insert into public.smollan_projects(code,client_id,name,service_type,cadence,status,start_date,end_date,cities,budget,currency,created_by,owner_id,planning_pattern,planning_custom_days,brand_color) values(:code,cast(:client as uuid),:name,cast(:service as public.project_service_type),cast(:cadence as public.project_cadence),cast(:status as public.project_status),:start,:end,string_to_array(:cities,','),:budget,'MAD',cast(:created_by as uuid),cast(:owner_id as uuid),:planning,cast(:custom_days as jsonb),:brand_color) returning id::text");
                 try {
-                    $stmt->execute(['code'=>$code,'client'=>$clientId,'name'=>$name,'service'=>$serviceType,'cadence'=>in_array(($data['cadence']??'none'),['VSD','SD','none'],true)?$data['cadence']:'none','status'=>'planning','start'=>$start,'end'=>$end,'cities'=>$cities,'budget'=>$budget,'created_by'=>Auth::user()['id'],'owner_id'=>Auth::user()['id']]);
+                    $stmt->execute(['code'=>$code,'client'=>$clientId,'name'=>$name,'service'=>$serviceType,'cadence'=>in_array($planning,['VSD','SD'],true)?$planning:'none','status'=>'planning','start'=>$start,'end'=>$end,'cities'=>$cities,'budget'=>$budget,'created_by'=>Auth::user()['id'],'owner_id'=>Auth::user()['id'],'planning'=>$planning,'custom_days'=>json_encode($customDays,JSON_THROW_ON_ERROR),'brand_color'=>$brandColor]);
                     $id = (string)$stmt->fetchColumn();
                     break;
                 } catch (\PDOException $e) {
@@ -55,7 +62,19 @@ final class ProjectWorkflowService {
             $moduleStmt = $this->pdo->prepare("insert into public.smollan_project_modules(project_id,module_key,enabled,configured_by) values(cast(:project as uuid),:module,true,cast(:actor as uuid)) on conflict(project_id,module_key) do update set enabled=true,configured_by=excluded.configured_by,configured_at=now()");
             foreach ($modules as $module) $moduleStmt->execute(['project'=>$id,'module'=>$module,'actor'=>Auth::user()['id']]);
             foreach ($storeIds as $storeId) $this->attachStore($id,$storeId);
-            Audit::record($this->pdo,'create','project',$id,'Project created',['modules'=>$modules,'store_count'=>count($storeIds)]);
+            if ($start && $end && $planning!=='none') {
+                $days = match($planning) {'VSD'=>[5,6,7],'SD'=>[6,7],'weekdays'=>[1,2,3,4,5],'daily'=>[1,2,3,4,5,6,7],'custom'=>$customDays,default=>[]};
+                $calendar = $this->pdo->prepare("insert into public.smollan_project_working_days(project_id,store_id,work_date,is_activation_day,planned_promoters,created_by) values(cast(:project as uuid),cast(:store as uuid),:work_date,true,0,cast(:actor as uuid)) on conflict(project_id,store_id,work_date) do nothing");
+                $cursor = new \DateTimeImmutable($start); $last = new \DateTimeImmutable($end);
+                while ($cursor <= $last) {
+                    if (in_array((int)$cursor->format('N'),$days,true)) {
+                        $targets = $storeIds ?: [null];
+                        foreach ($targets as $storeId) $calendar->execute(['project'=>$id,'store'=>$storeId,'work_date'=>$cursor->format('Y-m-d'),'actor'=>Auth::user()['id']]);
+                    }
+                    $cursor = $cursor->modify('+1 day');
+                }
+            }
+            Audit::record($this->pdo,'create','project',$id,'Project created',['modules'=>$modules,'store_count'=>count($storeIds),'planning_pattern'=>$planning,'brand_color'=>$brandColor]);
             $this->pdo->commit();
             return $id;
         } catch (\Throwable $e) {
@@ -111,6 +130,27 @@ final class ProjectWorkflowService {
         } catch (\Throwable $e) { if($this->pdo->inTransaction())$this->pdo->rollBack(); throw $e; }
     }
 
+    public function updateClientBranding(array $data): void {
+        if (!Auth::can('platform_admin')) throw new RuntimeException('Only the Super Admin can edit client branding and contact settings.');
+        $clientId=trim((string)($data['client_id']??''));
+        if (!preg_match('/^[0-9a-f-]{36}$/i',$clientId)) throw new RuntimeException('Choose a valid client.');
+        $color=strtoupper(trim((string)($data['brand_color']??'#2457A6')));
+        if (!preg_match('/^#[0-9A-F]{6}$/',$color)) throw new RuntimeException('Brand color must be a valid six-digit hex color.');
+        $logo=trim((string)($data['logo_url']??''))?:null;
+        $background=trim((string)($data['background_url']??''))?:null;
+        foreach (['logo'=>$logo,'background'=>$background] as $label=>$url) if ($url!==null && (!filter_var($url,FILTER_VALIDATE_URL) || !in_array(strtolower((string)parse_url($url,PHP_URL_SCHEME)),['https'],true))) throw new RuntimeException(ucfirst($label).' must be an HTTPS URL.');
+        $roles=['trade_marketing'=>'Trade Marketing','procurement'=>'Procurement','field'=>'Field','direction_commerciale'=>'Direction Commerciale'];
+        $contacts=[];
+        foreach($roles as $key=>$label){
+            $contacts[$key]=['label'=>$label,'name'=>trim((string)($data[$key.'_name']??''))?:null,'email'=>strtolower(trim((string)($data[$key.'_email']??'')))?:null,'phone'=>trim((string)($data[$key.'_phone']??''))?:null];
+            if($contacts[$key]['email']!==null && !filter_var($contacts[$key]['email'],FILTER_VALIDATE_EMAIL)) throw new RuntimeException('Enter a valid email for '.$label.'.');
+        }
+        $q=$this->pdo->prepare("update public.smollan_clients set logo_url=:logo,background_url=:background,brand_color=:color,contact_directory=cast(:contacts as jsonb),updated_at=now() where id=cast(:id as uuid)");
+        $q->execute(['logo'=>$logo,'background'=>$background,'color'=>$color,'contacts'=>json_encode($contacts,JSON_THROW_ON_ERROR),'id'=>$clientId]);
+        if($q->rowCount()!==1) throw new RuntimeException('Client not found.');
+        Audit::record($this->pdo,'update','client',$clientId,'Client brand and contacts updated',['contact_roles'=>array_keys($roles)]);
+    }
+
     public function createPromoter(array $data): string {
         if (!Auth::can('platform_admin','leadership','activation_coordinator','field_manager','hr_coordinator')) throw new RuntimeException('Your role cannot create promoters.');
         $name=trim((string)($data['full_name']??''));
@@ -125,7 +165,7 @@ final class ProjectWorkflowService {
     }
 
     public function projectData(string $projectId): array {
-        $q=$this->pdo->prepare("select p.id::text,p.code,p.name,p.status::text as status,p.service_type::text as service_type,p.start_date,p.end_date,p.cities,p.budget,p.currency,c.name as client_name from public.smollan_projects p join public.smollan_clients c on c.id=p.client_id where p.id=cast(:id as uuid)");
+        $q=$this->pdo->prepare("select p.id::text,p.code,p.name,p.status::text as status,p.service_type::text as service_type,p.start_date,p.end_date,p.cities,p.budget,p.currency,p.planning_pattern,p.planning_custom_days::text as planning_custom_days,p.brand_color,c.name as client_name,c.logo_url as client_logo_url,c.background_url as client_background_url,c.brand_color as client_brand_color,c.contact_directory::text as client_contacts from public.smollan_projects p join public.smollan_clients c on c.id=p.client_id where p.id=cast(:id as uuid)");
         $q->execute(['id'=>$projectId]); $project=$q->fetch(PDO::FETCH_ASSOC);
         if (!$project) throw new RuntimeException('Project not found.');
         $q=$this->pdo->prepare("select module_key,enabled from public.smollan_project_modules where project_id=cast(:id as uuid) order by module_key");
@@ -182,7 +222,7 @@ final class ProjectWorkflowService {
     }
 
     public function resolveAttendanceLink(string $token): ?array {
-        $q=$this->pdo->prepare("select l.id::text as link_id,a.id::text as assignment_id,p.full_name,pr.name as project_name,s.name as store_name,l.expires_at from public.smollan_attendance_links l join public.smollan_assignments a on a.id=l.assignment_id join public.smollan_promoters p on p.id=a.promoter_id join public.smollan_projects pr on pr.id=a.project_id join public.smollan_stores s on s.id=a.store_id where l.token_hash=:hash and l.revoked_at is null and l.expires_at>now() and a.status='Active' and a.start_date<=current_date and (a.end_date is null or a.end_date>=current_date)");
+        $q=$this->pdo->prepare("select l.id::text as link_id,a.id::text as assignment_id,p.full_name,pr.name as project_name,pr.brand_color,c.logo_url as client_logo_url,c.background_url as client_background_url,s.name as store_name,l.expires_at from public.smollan_attendance_links l join public.smollan_assignments a on a.id=l.assignment_id join public.smollan_promoters p on p.id=a.promoter_id join public.smollan_projects pr on pr.id=a.project_id join public.smollan_clients c on c.id=pr.client_id join public.smollan_stores s on s.id=a.store_id where l.token_hash=:hash and l.revoked_at is null and l.expires_at>now() and a.status='Active' and a.start_date<=current_date and (a.end_date is null or a.end_date>=current_date)");
         $q->execute(['hash'=>hash('sha256',$token)]); return $q->fetch(PDO::FETCH_ASSOC) ?: null;
     }
 
