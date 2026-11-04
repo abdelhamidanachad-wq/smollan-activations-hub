@@ -57,7 +57,8 @@ final class ProjectWorkflowService {
             foreach ($storeIds as $storeId) $this->attachStore($id,$storeId);
             $mode=(string)($data['planning_mode']??'none');
             $dayMap=['VSD'=>[5,6,7],'SD'=>[6,7],'weekdays'=>[1,2,3,4,5],'daily'=>[1,2,3,4,5,6,7],'weekly'=>[1],'none'=>[]];
-            $days=$mode==='custom'?array_values(array_unique(array_map('intval',(array)($data['operating_days']??[]))):($dayMap[$mode]??[]);
+            $days=$mode==='custom'?array_values(array_unique(array_map('intval',(array)($data['operating_days']??[])))):($dayMap[$mode]??[]);
+            if(!in_array($mode,['VSD','SD','weekdays','custom','daily','weekly','none'],true))throw new RuntimeException('Choose a valid planning pattern.');
             $days=array_values(array_filter($days,fn($day)=>$day>=1&&$day<=7));
             if($mode==='custom'&&!$days)throw new RuntimeException('Choose at least one operating day for a custom plan.');
             $color=strtoupper(trim((string)($data['brand_color']??'#1D5D52')));
