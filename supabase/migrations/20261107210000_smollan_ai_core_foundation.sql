@@ -229,6 +229,36 @@ create policy "ai users append own audit entries"
     ))
   );
 
+
+create unique index if not exists smollan_ai_memory_seed_source_uidx
+  on public.smollan_ai_memory(scope_type, source_type, source_id, title)
+  where source_id is not null;
+
+insert into public.smollan_ai_memory
+  (scope_type, title, content, source_type, source_id, is_approved, confidence)
+values
+  (
+    'company',
+    'Promoter work planning cadence',
+    'VSD means Friday, Saturday and Sunday. SD means Saturday and Sunday. Custom planning means individually selected promoter working days.',
+    'system_seed',
+    'smollan-operational-rules-v1',
+    true,
+    1.000
+  ),
+  (
+    'company',
+    'Project phase is separate from promoter work planning',
+    'A project phase represents the general lifecycle phase of the project. Promoter work planning represents the individual working days or cadence assigned to field staff. Never treat a project phase as a VSD, SD or custom work schedule.',
+    'system_seed',
+    'smollan-operational-rules-v1',
+    true,
+    1.000
+  )
+on conflict (scope_type, source_type, source_id, title)
+where source_id is not null
+do nothing;
+
 comment on table public.smollan_ai_memory is
   'Approved, scoped business knowledge. Never store secrets, government IDs, bank details or raw sensitive HR records here.';
 comment on table public.smollan_ai_recommendations is
