@@ -42,6 +42,8 @@ export default function ProjectWorkspace({db,session,membership,project,projects
       db.from('smollan_assignments').select('promoter_id,store_id,project_id,status,store:smollan_stores(city)').order('created_at',{ascending:false}).limit(5000),
       db.from('smollan_project_deliverables').select('*').eq('project_id',projectId).order('created_at')
     ]);
+    const labels=['stores','project store links','supervisors','HR-approved promoters','project assignments','PLV materials','PLV store records','goodies','goodie dispatches','project planning','assignment history','deliverable lifecycle'];
+    q.forEach((r,i)=>{if(r.error)onToast('Could not load '+labels[i]+': '+r.error.message)});
     setStores(q[0].data||[]);setProjectStores(q[1].data||[]);setSupervisors(q[2].data||[]);setPromoters(q[3].data||[]);setAssignments(q[4].data||[]);setPlv(q[5].data||[]);setPlvRows(q[6].data||[]);setGifts(q[7].data||[]);setGiftRows(q[8].data||[]);setTasks(q[9].data||[]);setHistory(q[10].data||[]);setDeliverables(q[11].data||[]);
     setLoading(false);
   };
