@@ -179,7 +179,7 @@ create policy "ai users read authorized approved memory"
       select 1 from public.smollan_memberships m
       where m.user_id = (select auth.uid()) and m.is_active and (
         scope_type = 'company'
-        or (scope_type = 'user' and user_id = (select auth.uid()))
+        or (scope_type = 'user' and smollan_ai_memory.user_id = (select auth.uid()))
         or (scope_type = 'project' and exists (
           select 1 from public.smollan_projects p where p.id = project_id
         ))
