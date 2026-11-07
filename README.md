@@ -1,81 +1,89 @@
-# SMOLLAN Hub — Morocco Operations
+# SMOLLAN Activation Hub
 
-Project-centric operations workspace for retail marketing activations, field teams, stores, attendance, resource requests, gifts/POSM and project finance.
+Project-centric operations workspace for SMOLLAN retail activations, field teams, stores, staffing, attendance, production, PLV/POSM, surveys, digital games, quotations, suppliers, purchase orders and project finance.
 
-## Rebuilt application
-This branch replaces the old promoters-only panel with a broader Smollan Hub workspace based on the supplied product brief:
-- Project portfolio and project operational hub with related-module navigation.
-- Executive board dashboard with Morocco / Algeria market panels, leadership directory and legacy workbook source visibility.
-- Promoters, supervisors, stores, assignments and attendance.
-- Resource requests and approval states.
-- Gifts & goodies and PLV/POSM tracking.
-- Tasks, clients, project finance, and a mobile-first promoter portal.
-- Excel workbook import preview, column mapping, duplicate/key checks and explicit demo confirmation.
-- AI Assistant, WhatsApp inbox, Automations Center and Super Admin integration-readiness console.
+The production source of truth is the `main` branch of this repository. The React/Vite app is backed by the dedicated SMOLLAN Supabase project below.
 
-**Important:** this is a functional UI prototype, not a production launch. Seed records are illustrative, record edits/imports are held in local React state, AI responses are deterministic demo responses, WhatsApp messages are not sent, and automation switches do not execute jobs. No production data is connected to the UI yet.
+## Application workflows
 
-## Deploy on Vercel
-1. Import this repository in Vercel or select the existing project linked to it.
-2. Use branch `feat/smollan-hub-rebuild` for this rebuild.
-3. Root directory: repository root. Framework: **Vite**. Install: `npm install`. Build: `npm run build`. Output: `dist`.
-4. Deploy and check the build logs. The demo needs no environment variables to render.
-5. Do not add Supabase service-role keys, Google OAuth secrets, WhatsApp tokens or AI provider secrets to browser environment variables.
+- Project portfolio and project hub with activation setup, locations, dates, client, staffing/payroll assumptions, tasting materials, PLV, BAT, goodies, uniforms, tombola, surveys, digital games, lifecycle triggers and brand assets.
+- Project calendar, home readiness and delivery-health panels.
+- Promoter, supervisor, store, assignment and attendance workflows.
+- Tasting/consumables, gifts, uniforms and PLV/POSM production.
+- Survey studio with multilingual templates and promoter-facing survey links.
+- Digital game builder and public QR game route; prize allocation is server-side.
+- Quotation maker with project requirement import, line items, supplier comparisons and CSV export.
+- Purchase orders, invoices, expenses, budgets, dispatch and route/cost registers.
+- Floating AI copilot using the signed-in user's Supabase JWT and RLS permissions.
 
-## Supabase foundation
-Dedicated project: **SMOLLAN**  
-Ref: `ddrohraarhdbwamwnmnu` · Region: `eu-west-1`  
-URL: https://ddrohraarhdbwamwnmnu.supabase.co
+## Supabase production project
 
-The core schema and operations entities are applied. Tables include clients, projects, tasks, membership/access records, supervisors, stores, promoters, private promoter details, project/store/supervisor links, assignments, attendance, resource requests, gifts and distribution records, PLV/POSM, budgets, quotations, expenses, and import audit/results. Row Level Security is enabled. The SQL history is versioned in `supabase/migrations/`.
+- Project: **SMOLLAN**
+- Project ref: `nkrxpgshfqkubnovgrhy`
+- URL: https://nkrxpgshfqkubnovgrhy.supabase.co
+- Region: `eu-west-1`
 
-Before connecting the UI to live data, implement and test the trusted authentication flow, exact verified `@smollan.com` domain validation, admin-managed active membership, record-level role/scope checks, private Storage policies, and auditable server-side mutations. The browser must never be trusted to assign roles or approve memberships. Identity and bank information must remain encrypted or in private storage.
+All database migrations are versioned in `supabase/migrations/`. Apply them in ascending filename order. The activation/commercial, creative/survey, digital-game, quotation, operational RLS, security-hardening, legacy-import and secure-payroll-staging migrations are included in this repository.
 
-## Integration status
-Google Workspace OAuth, Drive, Calendar, Gmail, WhatsApp Business, external AI provider calls and real workflow execution are **not connected**. Super Admin is a setup checklist only and does not collect or persist credentials.
+### Edge Function
 
-## Excel import
-The workbook importer previews a worksheet and allows explicit column mapping. Current confirmation adds validated sample rows to the local demo session only. Production import still needs authenticated server-side writes, stable-key reconciliation, ambiguous-match review, transaction safety, and row-level result persistence.
+The `digital-game-play` Edge Function is deployed to the SMOLLAN project. It validates public game submissions and performs prize allocation with the Supabase service role on the server. Never expose `SUPABASE_SERVICE_ROLE_KEY` to the browser.
 
-## Safety
-- Do not connect this app to the MOROTTO project; it contains unrelated marketplace data.
-- Never commit secrets or real employee/client records.
-- Do not upload CIN images, bank documents or contracts to public storage.
+### Data API and RLS
 
+Keep the `public` schema exposed to the Supabase Data API only as required by the app. Table grants and RLS policies do not override the project's API schema exposure setting. Verify the SMOLLAN project's Data API settings after schema changes. All public operational tables have RLS enabled; unauthenticated users cannot read project or promoter records.
 
-## Connected activation workflows (November 2026)
+### First administrator
 
-This branch adds working project setup and creative/commercial workflows:
+The database currently has no Supabase Auth users. The one-time first-admin bootstrap function in the existing migration only accepts the designated, email-verified administrator identity configured in that migration. Sign up and verify that account before expecting project data to appear in the authenticated app. Do not create a user with an unverified or shared mailbox.
 
-- Project create/edit now stores activation format, staffing and payroll assumptions, tasting kits, PLV and BAT status, goodies, uniforms, tombola, digital games, survey template choice, lifecycle triggers and project brand assets.
-- Project creation can generate kickoff tasks; configured lifecycle triggers generate follow-up tasks when a project moves to brief received, in progress or completed.
-- The Quotation maker saves quotation headers and line items, imports activation requirements and compares supplier totals. CSV export is available for finance reconciliation.
-- Survey studio includes editable templates in French, Arabic and English. Promoter survey links render the saved question schema and record structured answers.
-- Production studio manages PLV specifications and digital games. Published games use QR links and server-side prize allocation.
-- Project calendar shows project date ranges; the home page includes workflow shortcuts and readiness checks.
-- The floating AI copilot can list projects, create tasks, update project dates/status/budget, create quotations and prepare project reports using the signed-in user's Supabase permissions.
+## Imported operational data
 
-### Database migrations
+Source workbooks available in the Project Library have been imported or staged with provenance:
 
-Apply the new migrations in timestamp order after the existing project-forms and operations migrations:
+- 43 activation projects across the finance tracker and 6 client accounts, including HALEON from the JPF source.
+- 42 client quotation records, imported as **Draft** because signed approval was not verified.
+- 10 client purchase-order records imported as **Received**; the source did not contain PO amounts, so imported totals are zero and the original document reference is retained in the notes.
+- 68 historical project cost-category totals imported as actuals. The source did not supply approved budgets by category, so the budget amount is deliberately left at zero.
+- 20 supplier records, 81 store records, 6 supervisors and 33 store/supervisor links.
+- 8 JAMILA goodies records.
+- 61 promoter profiles from the JPF FOOD and JPF HALEON sheets. They are marked **Inactive** pending HR validation. CIN/CNSS values are encrypted and stored in the private-details table; a one-time encryption key is held in Supabase Vault, not in source control.
+- 61 payroll rows are in the restricted `smollan_payroll_import_staging` table. The source files did not specify the payroll period, so these rows are **Review required** and are not posted payroll runs or payment instructions.
+- 63 participants from the activity export, 13 POSM quotation lines, 20 POSM store candidates and 33 PO/invoice follow-up rows are staged for review where identity, project association, currency, or document status was ambiguous.
 
-1. `20261107000000_activation_commercial_dispatch.sql`
-2. `20261107010000_project_creative_survey_builders.sql`
-3. `20261107020000_digital_game_runtime.sql`
-4. `20261107030000_quotation_lifecycle.sql`
-5. `20261107040000_quotation_permissions.sql`
-6. `20261107050000_builder_edit_permissions.sql`\n7. `20261107060000_operational_module_rls.sql`
+The raw field-activity export contains location/photo-linked activity rows. Those raw coordinates and image references were not copied into the live database; only store master data and a limited participant review list were extracted. Import those activity rows only after mapping them to verified projects, assignments and survey forms.
 
-### Supabase Data API exposure
+## Vercel deployment
 
-Supabase stopped automatically exposing newly created public-schema tables to the Data API by default (enforced across projects from 2026-10-30). After applying the migrations, verify the new operational tables and RPCs are exposed to the app's Data API and keep row-level security enabled. SQL grants and RLS policies do not override the project's Data API exposure setting. See the [Supabase Data API exposure change](https://supabase.com/changelog?tags=data+apis).
+Configure the Vercel project to use:
 
-### Server environment for the AI copilot
+- Repository: `abdelhamidanachad-wq/smollan-activations-hub`
+- Production branch: `main`
+- Framework: **Vite**
+- Root directory: repository root
+- Install command: `npm install`
+- Build command: `npm run build`
+- Output directory: `dist`
 
-Set these as Vercel server environment variables (not public `VITE_` secrets):
+Required browser build variables:
+
+- `VITE_SUPABASE_URL=https://nkrxpgshfqkubnovgrhy.supabase.co`
+- `VITE_SUPABASE_ANON_KEY` = the Supabase publishable key for SMOLLAN
+
+Optional server-side variables for `/api/assistant`:
 
 - `OPENAI_API_KEY`
 - `SUPABASE_URL`
 - `SUPABASE_ANON_KEY`
 
-The assistant endpoint is `/api/assistant`. It forwards the signed-in user's JWT to Supabase so row-level security remains in force. The AI endpoint is unavailable until these server variables are configured.\n\nDeploy the public QR game runtime with `supabase functions deploy digital-game-play`. The Edge Function uses Supabase's server-provided `SUPABASE_SERVICE_ROLE_KEY`; never expose it in browser variables. The prize-allocation RPC is executable only by `service_role`, while public game lookup is limited to published-game display columns.
+Do not put service-role keys, Vault secrets, employee identifiers, or other private values in `VITE_*` variables.
+
+**Deployment status:** the GitHub source and Supabase database have been updated, but production deployment is still pending. The connected Vercel identity currently receives HTTP 403 when creating a project in the connected team, and no accessible Vercel project is linked to this repository. Grant the connected Vercel identity project-create/deploy permission or link an existing Vercel project to this GitHub repository, then deploy `main`. Do not treat a GitHub build check as a production deployment.
+
+## Security notes
+
+- Do not connect this app to the unrelated MOROTTO project.
+- Never commit secrets, private employee identifiers, payroll data, or client financial documents.
+- Keep promoter private details and payroll staging restricted to HR/Finance/authorized leadership roles.
+- Imported promoter records remain inactive until HR confirms identity, contract and current status.
+- Do not mark draft quotations, unverified POs or staged payroll rows as approved or paid without source evidence.
