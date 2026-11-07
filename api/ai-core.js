@@ -187,6 +187,15 @@ export default async function handler(req, res) {
       return res.status(403).json({ error: 'An active SMOLLAN workspace membership is required.' });
     }
 
+    const recentRuns = await db.from('smollan_ai_runs')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .gte('created_at', new Date(Date.now() - 60_000).toISOString());
+    if (recentRuns.error) throw recentRuns.error;
+    if ((recentRuns.count || 0) >= 10) {
+      return res.status(429).json({ error: 'AI Core rate limit reached. Please wait a minute before trying again.' });
+    }
+
     const department = departmentForRole(membership.role);
     const context = safeContext(req.body?.context);
     const requestedConversationId = UUID_RE.test(String(req.body?.conversationId || ''))
