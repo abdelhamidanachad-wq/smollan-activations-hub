@@ -161,7 +161,6 @@ begin
     'smollan_activation_cost_items',
     'smollan_dispatch_routes',
     'smollan_dispatch_costs',
-    'smollan_purchase_orders',
     'smollan_invoice_register'
   ] loop
     execute format('alter table public.%I enable row level security', t);
