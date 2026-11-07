@@ -32,7 +32,7 @@ create policy "published games public read" on public.smollan_digital_games for 
 
 create or replace function public.smollan_play_digital_game(
  p_slug text,p_fingerprint text,p_phone text default null,p_answers jsonb default '{}'::jsonb,p_consent boolean default false
-) returns jsonb language plpgsql security invoker set search_path=public as $
+) returns jsonb language plpgsql security invoker set search_path=public as $$
 declare
  g public.smollan_digital_games%rowtype;
  chosen jsonb;
