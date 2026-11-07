@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import * as XLSX from 'xlsx';
-import { ArrowLeft, CalendarDays, ChevronRight, CircleDot, ClipboardList, Download, Gift, Layers3, MapPin, Package, Plus, Store, Users, WandSparkles, Upload } from 'lucide-react';
+import { ArrowLeft, CalendarDays, ChevronRight, CircleDot, ClipboardList, Download, FileSpreadsheet, Gift, Layers3, MapPin, Package, Plus, Store, Users, WandSparkles, Upload } from 'lucide-react';
 import './ProjectWorkspace.css';
 
 const tabs = [
@@ -18,7 +18,7 @@ const safe = (v) => String(v ?? '').replace(/[<>]/g,'');
 const phaseOf = (t) => (String(t.description||'').match(/Planning phase: (VSD|SD|Production|Field launch|Close-out)/i)||[])[1] || 'VSD';
 const initials = (s='SM') => s.split(/\s+/).filter(Boolean).slice(0,2).map(x=>x[0]).join('').toUpperCase();
 
-export default function ProjectWorkspace({db,session,membership,project,projects,onBack,onToast}) {
+export default function ProjectWorkspace({db,session,membership,project,projects,onBack,onToast,onOpenIntegrations}) {
   const [tab,setTab]=useState('overview');
   const [history,setHistory]=useState([]),[deliverables,setDeliverables]=useState([]),[stores,setStores]=useState([]),[projectStores,setProjectStores]=useState([]),[supervisors,setSupervisors]=useState([]),[promoters,setPromoters]=useState([]),[assignments,setAssignments]=useState([]),[plv,setPlv]=useState([]),[plvRows,setPlvRows]=useState([]),[gifts,setGifts]=useState([]),[giftRows,setGiftRows]=useState([]),[tasks,setTasks]=useState([]);
   const [loading,setLoading]=useState(true),[search,setSearch]=useState(''),[storePick,setStorePick]=useState(''),[promoterPick,setPromoterPick]=useState(''),[supervisorPick,setSupervisorPick]=useState(''),[promoterCount,setPromoterCount]=useState(1),[itemName,setItemName]=useState(''),[itemQty,setItemQty]=useState(0),[itemCost,setItemCost]=useState(0),[itemType,setItemType]=useState('Display'),[giftStage,setGiftStage]=useState('Concept'),[allocationGift,setAllocationGift]=useState(''),[allocationStore,setAllocationStore]=useState(''),[allocationQty,setAllocationQty]=useState(0),[milestone,setMilestone]=useState({title:'',due:'',owner:'Planning',phase:'VSD'});
@@ -114,7 +114,7 @@ export default function ProjectWorkspace({db,session,membership,project,projects
   };
   if(!project)return null;
   return <div className="pw-shell">
-    <div className="pw-top"><button className="pw-back" onClick={onBack}><ArrowLeft size={16}/> All projects</button><div className="pw-breadcrumb">Projects <ChevronRight size={13}/> <strong>{project.code||project.name}</strong></div><div className="pw-top-actions"><label className="pw-import"><Upload size={14}/> Import XLSX<input type="file" accept=".xlsx,.xls,.csv" onChange={importWorkbook}/></label><button className="pw-export" onClick={exportProject}><Download size={15}/> Export XLSX</button></div></div>
+    <div className="pw-top"><button className="pw-back" onClick={onBack}><ArrowLeft size={16}/> All projects</button><div className="pw-breadcrumb">Projects <ChevronRight size={13}/> <strong>{project.code||project.name}</strong></div><div className="pw-top-actions"><button className="pw-import" onClick={onOpenIntegrations}><FileSpreadsheet size={14}/> Drive / Sheets</button>{['stores','planning'].includes(tab)&&<label className="pw-import"><Upload size={14}/> Import XLSX<input type="file" accept=".xlsx,.xls,.csv" onChange={importWorkbook}/></label>}<button className="pw-export" onClick={exportProject}><Download size={15}/> Export XLSX</button></div></div>
     <section className="pw-hero"><div className="pw-hero-main"><span className="pw-eyebrow">{safe(project.client||'CLIENT')} · {safe(project.code||'PROJECT')}</span><h1>{safe(project.name)}</h1><p>{safe(project.start_date||'Start date not set')} — {safe(project.end_date||'End date not set')} · {safe(project.status||'Planning')}</p><div className="pw-hero-actions"><span><MapPin size={14}/>{projectStores.length} stores</span><span><Users size={14}/>{assignedCount} assigned / {plannedCount} planned promoters</span><span><CalendarDays size={14}/>{tasks.length} planning milestones</span></div></div><div className="pw-health"><div className="pw-health-ring"><strong>{Math.round((projectStores.length+plv.length+gifts.length+tasks.filter(t=>t.status==='done').length)/Math.max(1,projectStores.length+plv.length+gifts.length+tasks.length)*100)}%</strong><small>setup coverage</small></div></div></section>
     <nav className="pw-tabs">{tabs.map(t=><button key={t.id} className={tab===t.id?'active':''} onClick={()=>setTab(t.id)}><t.icon size={16}/>{t.label}</button>)}</nav>
     {loading?<div className="pw-loading"><span className="pw-spinner"/> Loading project workspace…</div>:<>
