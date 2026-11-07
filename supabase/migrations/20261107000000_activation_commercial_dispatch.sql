@@ -116,6 +116,15 @@ create table if not exists public.smollan_purchase_orders (
   updated_at timestamptz not null default now()
 );
 
+-- Extend the existing PO workflow rather than shadowing the established supplier/PO tables.
+alter table public.smollan_purchase_orders alter column supplier_id drop not null;
+alter table public.smollan_purchase_orders
+  add column if not exists po_direction text not null default 'PO sent to supplier',
+  add column if not exists counterparty_name text,
+  add column if not exists issue_date date,
+  add column if not exists document_url text,
+  add column if not exists followup_notes text;
+
 create table if not exists public.smollan_invoice_register (
   id uuid primary key default gen_random_uuid(),
   project_id uuid not null references public.smollan_projects(id) on delete cascade,
