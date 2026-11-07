@@ -79,7 +79,7 @@ Apply `supabase/migrations/20261107210000_smollan_ai_core_foundation.sql` only a
 
 The Supabase project currently reports two applied migrations that were not present in the inspected Git tree:
 - `20261107204217_allow_verified_smollan_admin_email`
-- `20261107204504_store_gps_and_banner_directory_fields` (the database migration list reports `enable_command_center_realtime_tables` at this version; verify the exact migration filename before reconciling).
+- `20261107204504_enable_command_center_realtime_tables`.
 
 Reconcile this migration-history drift before applying future migrations from the repository. Do not reset production migration history.
 
