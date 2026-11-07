@@ -40,8 +40,13 @@ export default async function handler(req,res){
   if(name==='update_project'){
    const patch={};for(const k of ['status','start_date','end_date','budget'])if(args[k]!==undefined)patch[k]=args[k];
    if(!Object.keys(patch).length)throw new Error('No project fields were supplied to update.');
+   const before=await db.from('smollan_projects').select('id,status,name,start_date').eq('id',args.project_id).single();if(before.error)throw before.error;
    const r=await db.from('smollan_projects').update(patch).eq('id',args.project_id).select('id,code,name,status,start_date,end_date,budget').single();
-   if(r.error)throw r.error;return r.data;
+   if(r.error)throw r.error;
+   let triggered=[];
+   if(patch.status&&patch.status!==before.data.status){const cfg=await db.from('smollan_activation_configs').select('activation_triggers_json').eq('project_id',args.project_id).maybeSingle();const flags=cfg.data?.activation_triggers_json||{};if(patch.status==='brief_received'&&flags.on_approval)triggered.push('Scope confirmed: release supplier quotation and resource planning');if(patch.status==='in_progress'&&flags.on_start)triggered.push('Activation started: confirm field deployment and daily reporting');if(patch.status==='completed'&&flags.on_end)triggered.push('Activation closeout: reconcile materials, attendance and invoices');}
+   if(triggered.length){const t=await db.from('smollan_tasks').insert(triggered.map(title=>({project_id:args.project_id,title,status:'todo',priority:2,assigned_to:userData.user.id,created_by:userData.user.id,due_at:new Date().toISOString()}))).select('id,title,status');if(t.error)return {...r.data,warning:'Project updated; trigger tasks failed: '+t.error.message};return {...r.data,triggered_tasks:t.data};}
+   return r.data;
   }
   if(name==='create_quotation'){
    const project=await db.from('smollan_projects').select('id,client_id').eq('id',args.project_id).single();if(project.error)throw project.error;
