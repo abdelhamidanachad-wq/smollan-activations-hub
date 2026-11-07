@@ -55,7 +55,27 @@ final class ProjectWorkflowService {
             $moduleStmt = $this->pdo->prepare("insert into public.smollan_project_modules(project_id,module_key,enabled,configured_by) values(cast(:project as uuid),:module,true,cast(:actor as uuid)) on conflict(project_id,module_key) do update set enabled=true,configured_by=excluded.configured_by,configured_at=now()");
             foreach ($modules as $module) $moduleStmt->execute(['project'=>$id,'module'=>$module,'actor'=>Auth::user()['id']]);
             foreach ($storeIds as $storeId) $this->attachStore($id,$storeId);
-            Audit::record($this->pdo,'create','project',$id,'Project created',['modules'=>$modules,'store_count'=>count($storeIds)]);
+            $mode=(string)($data['planning_mode']??'none');
+            $dayMap=['VSD'=>[5,6,7],'SD'=>[6,7],'weekdays'=>[1,2,3,4,5],'daily'=>[1,2,3,4,5,6,7],'weekly'=>[1],'none'=>[]];
+            $days=$mode==='custom'?array_values(array_unique(array_map('intval',(array)($data['operating_days']??[])))):($dayMap[$mode]??[]);
+            if(!in_array($mode,['VSD','SD','weekdays','custom','daily','weekly','none'],true))throw new RuntimeException('Choose a valid planning pattern.');
+            $days=array_values(array_filter($days,fn($day)=>$day>=1&&$day<=7));
+            if($mode==='custom'&&!$days)throw new RuntimeException('Choose at least one operating day for a custom plan.');
+            $color=strtoupper(trim((string)($data['brand_color']??'#1D5D52')));
+            if(!preg_match('/^#[0-9A-F]{6}$/',$color))$color='#1D5D52';
+            $logo=trim((string)($data['logo_url']??''))?:null;
+            $background=trim((string)($data['background_url']??''))?:null;
+            foreach(['logo_url'=>$logo,'background_url'=>$background] as $field=>$url)if($url&&!filter_var($url,FILTER_VALIDATE_URL))throw new RuntimeException('Brand image fields must be valid https URLs.');
+            $settings=$this->pdo->prepare("insert into public.smollan_project_settings(project_id,planning_mode,operating_days,brand_color,logo_url,background_url,created_by) values(cast(:project as uuid),:mode,:days,:color,:logo,:background,cast(:actor as uuid))");
+            $settings->execute(['project'=>$id,'mode'=>$mode,'days'=>'{'.implode(',',$days).'}','color'=>$color,'logo'=>$logo,'background'=>$background,'actor'=>Auth::user()['id']]);
+            if($start&&$end&&$days){
+                $storesForCalendar=$storeIds?:[null];
+                $calendar=$this->pdo->prepare("insert into public.smollan_project_working_days(project_id,store_id,work_date,is_activation_day,created_by) values(cast(:project as uuid),cast(:store as uuid),:work_date,true,cast(:actor as uuid)) on conflict do nothing");
+                $cursor=new \DateTimeImmutable($start);$last=new \DateTimeImmutable($end);
+                if($last->diff($cursor)->days>730)throw new RuntimeException('Project planning range cannot exceed two years.');
+                while($cursor<=$last){if(in_array((int)$cursor->format('N'),$days,true)){foreach($storesForCalendar as $storeIdForDay)$calendar->execute(['project'=>$id,'store'=>$storeIdForDay,'work_date'=>$cursor->format('Y-m-d'),'actor'=>Auth::user()['id']]);}$cursor=$cursor->modify('+1 day');}
+            }
+            Audit::record($this->pdo,'create','project',$id,'Project created',['modules'=>$modules,'store_count'=>count($storeIds),'planning_mode'=>$mode,'operating_days'=>$days,'brand_color'=>$color]);
             $this->pdo->commit();
             return $id;
         } catch (\Throwable $e) {
@@ -125,7 +145,7 @@ final class ProjectWorkflowService {
     }
 
     public function projectData(string $projectId): array {
-        $q=$this->pdo->prepare("select p.id::text,p.code,p.name,p.status::text as status,p.service_type::text as service_type,p.start_date,p.end_date,p.cities,p.budget,p.currency,c.name as client_name from public.smollan_projects p join public.smollan_clients c on c.id=p.client_id where p.id=cast(:id as uuid)");
+        $q=$this->pdo->prepare("select p.id::text,p.code,p.name,p.status::text as status,p.service_type::text as service_type,p.start_date,p.end_date,p.cities,p.budget,p.currency,c.name as client_name,coalesce(ps.brand_color,c.brand_color,'#1D5D52') as brand_color,coalesce(ps.logo_url,c.logo_url) as logo_url,coalesce(ps.background_url,c.background_url) as background_url,coalesce(ps.planning_mode,'none') as planning_mode,coalesce(ps.operating_days,'{}'::smallint[]) as operating_days from public.smollan_projects p join public.smollan_clients c on c.id=p.client_id left join public.smollan_project_settings ps on ps.project_id=p.id where p.id=cast(:id as uuid)");
         $q->execute(['id'=>$projectId]); $project=$q->fetch(PDO::FETCH_ASSOC);
         if (!$project) throw new RuntimeException('Project not found.');
         $q=$this->pdo->prepare("select module_key,enabled from public.smollan_project_modules where project_id=cast(:id as uuid) order by module_key");
