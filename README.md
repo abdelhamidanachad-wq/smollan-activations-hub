@@ -66,6 +66,10 @@ Apply the new migrations in timestamp order after the existing project-forms and
 5. `20261107040000_quotation_permissions.sql`
 6. `20261107050000_builder_edit_permissions.sql`
 
+### Supabase Data API exposure
+
+Supabase stopped automatically exposing newly created public-schema tables to the Data API by default (enforced across projects from 2026-10-30). After applying the migrations, verify the new operational tables and RPCs are exposed to the app's Data API and keep row-level security enabled. SQL grants and RLS policies do not override the project's Data API exposure setting. See the [Supabase Data API exposure change](https://supabase.com/changelog?tags=data+apis).
+
 ### Server environment for the AI copilot
 
 Set these as Vercel server environment variables (not public `VITE_` secrets):
