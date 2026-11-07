@@ -29,6 +29,13 @@ final class WorkflowService {
                 if($desc===''||$qty<=0||$price<0) throw new RuntimeException('Each line needs a description, positive quantity and non-negative unit price.');
                 $line->execute(['id'=>$id,'description'=>$desc,'quantity'=>$qty,'price'=>$price]);
             }
+            if(!empty($data['include_activation_materials'])) {
+                $materials=$this->pdo->prepare("select item_name,quantity,unit,coalesce(unit_budget,0) as unit_budget from public.smollan_activation_material_requirements where project_id=cast(:project as uuid) and include_in_quotation=true order by category,item_name");
+                $materials->execute(['project'=>$projectId]);
+                foreach($materials->fetchAll(PDO::FETCH_ASSOC) as $material) {
+                    $line->execute(['id'=>$id,'description'=>$material['item_name'].' ('.$material['unit'].')','quantity'=>(float)$material['quantity'],'price'=>(float)$material['unit_budget']]);
+                }
+            }
             $sum=$this->pdo->prepare('update public.smollan_quotations set total_amount=(select coalesce(sum(line_total),0) from public.smollan_quotation_lines where quotation_id=cast(:find_id as uuid)) where id=cast(:update_id as uuid)');
             $sum->execute(['find_id'=>$id,'update_id'=>$id]);
             Audit::record($this->pdo,'created','quotation',$id,'Created quotation '.$number,['line_count'=>count($lines)]);
