@@ -243,3 +243,8 @@ html[data-theme="dark"] .modal-head p{color:var(--cc-muted)}
 @media(max-width:850px){.store-filter-row{grid-template-columns:repeat(2,minmax(0,1fr))}.store-search{grid-column:1/-1}}
 @media(max-width:520px){.store-filter-row{grid-template-columns:1fr}.store-search{grid-column:auto}.store-directory-meta{align-items:flex-start;flex-direction:column}.modal-backdrop,.ops-modal-backdrop{padding:10px!important}.modal,.ops-modal{max-height:calc(100dvh - 20px);border-radius:16px}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+
+.app-shell{position:relative;isolation:isolate}
+.app-shell:before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.42;background:radial-gradient(circle at 78% 12%,rgba(49,94,251,.11),transparent 27%),radial-gradient(circle at 18% 82%,rgba(22,198,193,.09),transparent 24%);animation:cc-ambient-drift 18s ease-in-out infinite alternate}
+html[data-theme="dark"] .app-shell:before{opacity:.62;background:radial-gradient(circle at 78% 12%,rgba(81,111,255,.16),transparent 27%),radial-gradient(circle at 18% 82%,rgba(22,198,193,.12),transparent 24%)}
+@keyframes cc-ambient-drift{from{transform:translate3d(-1%,0,0) scale(1)}to{transform:translate3d(1.2%,-1%,0) scale(1.035)}}
