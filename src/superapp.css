@@ -237,3 +237,5 @@ body{background:radial-gradient(ellipse at 72% -10%,#e6eaff 0,transparent 42%),l
 @keyframes toastRise{from{opacity:0;transform:translateY(18px) scale(.96)}to{opacity:1;transform:translateY(0) scale(1)}}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important;transition-duration:.01ms!important}}
 @media(max-width:720px){.announcement-ticker{gap:9px}.ticker-status{display:none}.timeline-row{grid-template-columns:1fr;gap:5px}.timeline-row .status-pill{justify-self:start}}
+
+.active-project-switch{height:38px;max-width:280px;display:flex;align-items:center;gap:7px;padding:0 10px;border:1px solid #dce5f2;border-radius:10px;background:#fff;color:#6578a0}.active-project-switch select{min-width:0;max-width:235px;border:0;outline:0;background:transparent;color:#17344d;font-size:10px;font-weight:800}.top-actions{gap:10px}@media(max-width:900px){.active-project-switch{max-width:160px}.active-project-switch select{max-width:120px}}@media(max-width:600px){.active-project-switch{display:none}}
