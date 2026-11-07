@@ -64,7 +64,7 @@ Apply the new migrations in timestamp order after the existing project-forms and
 3. `20261107020000_digital_game_runtime.sql`
 4. `20261107030000_quotation_lifecycle.sql`
 5. `20261107040000_quotation_permissions.sql`
-6. `20261107050000_builder_edit_permissions.sql`
+6. `20261107050000_builder_edit_permissions.sql`\n7. `20261107060000_operational_module_rls.sql`
 
 ### Supabase Data API exposure
 
