@@ -27,7 +27,7 @@ create policy "assigned promoters submit project form responses" on public.smoll
 with check (
  submitted_by=auth.uid()
  and promoter_id in (select p.id from public.smollan_promoters p where p.user_id=auth.uid())
- and exists(select 1 from public.smollan_assignments a where a.promoter_id=promoter_id and a.project_id=project_id and a.status='Active')
+ and exists(select 1 from public.smollan_assignments a where a.id=smollan_project_form_responses.assignment_id and a.promoter_id=smollan_project_form_responses.promoter_id and a.project_id=smollan_project_form_responses.project_id and a.store_id=smollan_project_form_responses.store_id and a.status='Active')
 );
 create policy "authorized staff review project form responses" on public.smollan_project_form_responses for update to authenticated
 using (exists(select 1 from public.smollan_memberships m where m.user_id=auth.uid() and m.is_active and m.role in ('platform_admin','leadership','activation_coordinator','field_operations','supervisor')))
