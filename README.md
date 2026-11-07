@@ -21,7 +21,7 @@ The production source of truth is the `main` branch of this repository. The Reac
 - Project: **SMOLLAN**
 - Project ref: `nkrxpgshfqkubnovgrhy`
 - URL: https://nkrxpgshfqkubnovgrhy.supabase.co
-- Region: `eu-west-1`
+- Region: `eu-west-2`
 
 All database migrations are versioned in `supabase/migrations/`. Apply them in ascending filename order. The activation/commercial, creative/survey, digital-game, quotation, operational RLS, security-hardening, legacy-import and secure-payroll-staging migrations are included in this repository.
 
@@ -41,7 +41,7 @@ The database currently has no Supabase Auth users. The one-time first-admin boot
 
 Source workbooks available in the Project Library have been imported or staged with provenance:
 
-- 43 activation projects across the finance tracker and 6 client accounts, including HALEON from the JPF source.
+- 45 project records total (43 from the finance tracker plus 2 project records created from the JPF sheets) across 6 client accounts, including HALEON.
 - 42 client quotation records, imported as **Draft** because signed approval was not verified.
 - 10 client purchase-order records imported as **Received**; the source did not contain PO amounts, so imported totals are zero and the original document reference is retained in the notes.
 - 68 historical project cost-category totals imported as actuals. The source did not supply approved budgets by category, so the budget amount is deliberately left at zero.
