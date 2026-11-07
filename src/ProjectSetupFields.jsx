@@ -9,7 +9,8 @@ export default function ProjectSetupFields({value,setValue}){
  <label className="field full">Project name<input required value={value.name} onChange={e=>set('name',e.target.value)}/></label>
  <label className="field full">Client<input required value={value.client} onChange={e=>set('client',e.target.value)}/></label>
  {select('service_type','Service type',['activation','permanent_promoters','production_only','in_store_animation','merchandising'])}
- {select('status','Project status',['lead','brief_received','planning','in_progress','on_hold','completed','archived'])}
+ {select('cadence','Promoter workday pattern',['none','VSD','SD'])}
+ {select('status','Project phase',['lead','brief_received','planning','in_progress','on_hold','completed','archived'])}
  {select('activation_type','Activation format',['In-store','Street','Roadshow','Event','Foodtruck','Sampling','Merchandising','Other'])}
  {text('start_date','Start date','date')}{text('end_date','End date','date')}</div></section>
  <section className="setup-section"><h3>02 · Promoters & payroll</h3><div className="form-grid">
