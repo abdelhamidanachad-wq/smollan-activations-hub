@@ -44,6 +44,7 @@ create table if not exists public.smollan_activation_configs (
 create table if not exists public.smollan_activation_cost_items (
   id uuid primary key default gen_random_uuid(),
   project_id uuid not null references public.smollan_projects(id) on delete cascade,
+  quotation_id uuid references public.smollan_quotations(id) on delete set null,
   category text not null,
   item_name text not null,
   specification text,
