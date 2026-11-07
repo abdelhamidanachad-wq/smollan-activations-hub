@@ -14,7 +14,7 @@ The production source of truth is the `main` branch of this repository. The Reac
 - Digital game builder and public QR game route; prize allocation is server-side.
 - Quotation maker with project requirement import, line items, supplier comparisons and CSV export.
 - Purchase orders, invoices, expenses, budgets, dispatch and route/cost registers.
-- Floating AI copilot using the signed-in user's Supabase JWT and RLS permissions.
+- SMOLLAN AI Core with authenticated, RLS-scoped project analysis, approved business memory and human-review recommendations. See [AI Core architecture and rollout](docs/ai-core.md).
 
 ## Supabase production project
 
@@ -70,9 +70,12 @@ Required browser build variables:
 - `VITE_SUPABASE_URL=https://nkrxpgshfqkubnovgrhy.supabase.co`
 - `VITE_SUPABASE_ANON_KEY` = the Supabase publishable key for SMOLLAN
 
-Optional server-side variables for `/api/assistant`:
+Server-side variables for `/api/ai-core` (the legacy `/api/assistant` path aliases the same safeguarded handler):
 
-- `OPENAI_API_KEY`
+- `AI_GATEWAY_API_KEY` (recommended) or Vercel OIDC
+- `AI_CORE_FAST_MODEL` and `AI_CORE_REASONING_MODEL` (verified Gateway model IDs)
+- `AI_CORE_FALLBACK_MODEL` (optional)
+- `OPENAI_API_KEY` (compatibility fallback)
 - `SUPABASE_URL`
 - `SUPABASE_ANON_KEY`
 
@@ -87,3 +90,8 @@ Do not put service-role keys, Vault secrets, employee identifiers, or other priv
 - Keep promoter private details and payroll staging restricted to HR/Finance/authorized leadership roles.
 - Imported promoter records remain inactive until HR confirms identity, contract and current status.
 - Do not mark draft quotations, unverified POs or staged payroll rows as approved or paid without source evidence.
+
+
+### AI Core rollout
+
+The AI Core database migration is additive and must be reviewed and applied through the controlled rollout described in [docs/ai-core.md](docs/ai-core.md). The first release only reads operational data and saves draft recommendations; it does not execute operational changes.
