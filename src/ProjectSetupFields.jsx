@@ -27,7 +27,7 @@ export default function ProjectSetupFields({value,setValue}){
  {select('game_type','Game mechanic',['spin_wheel','scratch_card','quiz','instant_win'])}
  {select('survey_enabled','Survey enabled',['No','Yes'])}
  {select('survey_template','Survey template',['sampling-feedback','brand-awareness','store-execution','promoter-pulse','nps'])}
- <div className="trigger-grid"><strong>Automation triggers</strong>{[['trigger_on_create','On project creation'],['trigger_on_approval','On project approval'],['trigger_on_start','On activation start'],['trigger_on_end','On activation end']].map(([k,l])=><label key={k}><input type="checkbox" checked={!!value[k]} onChange={e=>set(k,e.target.checked)}/>{l}</label>)}</div>
+ <div className="trigger-grid"><strong>Automation triggers</strong>{[['trigger_on_create','On project creation'],['trigger_on_approval','On brief / scope confirmation'],['trigger_on_start','On activation start'],['trigger_on_end','On activation end']].map(([k,l])=><label key={k}><input type="checkbox" checked={!!value[k]} onChange={e=>set(k,e.target.checked)}/>{l}</label>)}</div>
  </div></section>
  <section className="setup-section"><h3>05 · Project identity</h3><div className="form-grid">
  {text('brand_primary_color','Primary brand color','color')}{text('brand_secondary_color','Secondary brand color','color')}
