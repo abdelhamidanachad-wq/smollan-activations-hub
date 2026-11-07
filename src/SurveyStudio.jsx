@@ -26,7 +26,7 @@ export default function SurveyStudio({db,session,membership,projects=[],forms=[]
  const patchQuestion=(i,patch)=>setQuestions(rows=>rows.map((r,n)=>n===i?{...r,...patch}:r));
  const save=async()=>{
   if(!canWrite){setError('Sign in with an active SMOLLAN membership to publish surveys.');return}
-  if(!projectId||!title[defaultLanguage]?.trim()||!questions.length){setError('Choose a project, add a title in the default language and add at least one question.');return}
+  if(!enabled.length||!enabled.includes(defaultLanguage)){setError('Choose at least one language and keep the default language enabled.');return}if(!projectId||!title[defaultLanguage]?.trim()||!questions.length){setError('Choose a project, add a title in the default language and add at least one question.');return}
   if(enabled.some(l=>!title[l]?.trim())){setError('Add a title for every enabled language.');return}
   setSaving(true);setError('');
   const translations=Object.fromEntries(enabled.map(l=>[l,{title:title[l]}]));
