@@ -1,0 +1,1 @@
+alter table public.smollan_quotations add column if not exists supplier_id uuid references public.smollan_suppliers(id) on delete set null; create index if not exists smollan_quotations_supplier_idx on public.smollan_quotations(supplier_id);

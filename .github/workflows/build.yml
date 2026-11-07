@@ -3,7 +3,7 @@ on:
   pull_request:
     branches: [main, fix/vite-entrypoint]
   push:
-    branches: [feat/smollan-hub-rebuild, redesign/project-workspace-ux]
+    branches: [feat/smollan-hub-rebuild, redesign/project-workspace-ux, fix/project-centric-superapp-redesign]
 jobs:
   build:
     runs-on: ubuntu-latest
