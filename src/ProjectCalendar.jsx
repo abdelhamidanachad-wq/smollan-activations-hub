@@ -1,7 +1,7 @@
 import React,{useMemo,useState} from 'react';
 import {ChevronLeft,ChevronRight,CalendarDays} from 'lucide-react';
 const monthName=d=>d.toLocaleDateString('en-US',{month:'long',year:'numeric'});
-const dayKey=d=>d.toISOString().slice(0,10);
+const dayKey=d=>[d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');
 export default function ProjectCalendar({projects=[],onOpenProject=()=>{}}){
  const [cursor,setCursor]=useState(()=>new Date(new Date().getFullYear(),new Date().getMonth(),1));
  const first=new Date(cursor.getFullYear(),cursor.getMonth(),1),start=new Date(first);start.setDate(1-first.getDay());
