@@ -16,7 +16,7 @@ create policy "staff read digital game entries" on public.smollan_digital_game_e
 using (exists(select 1 from public.smollan_memberships m where m.user_id=auth.uid() and m.is_active and m.role in ('platform_admin','leadership','activation_coordinator','field_operations','supervisor')));
 
 create or replace function public.smollan_get_digital_game(p_slug text)
-returns jsonb language plpgsql security definer set search_path=public as $$
+returns jsonb language plpgsql security invoker set search_path=public as $
 declare g public.smollan_digital_games%rowtype;
 begin
  select * into g from public.smollan_digital_games where slug=p_slug and status='Published'
@@ -25,11 +25,14 @@ begin
  return jsonb_build_object('id',g.id,'title',g.title,'game_type',g.game_type,'default_language',g.default_language,
  'available_languages',g.available_languages,'translations',g.translations,'questions',g.questions,'rules',g.rules);
 end $$;
+revoke all on function public.smollan_get_digital_game(text) from public;
 grant execute on function public.smollan_get_digital_game(text) to anon, authenticated;
+grant select (id,title,game_type,slug,default_language,available_languages,translations,questions,rules,starts_at,ends_at) on public.smollan_digital_games to anon;
+create policy "published games public read" on public.smollan_digital_games for select to anon, authenticated using (status='Published' and (starts_at is null or starts_at<=now()) and (ends_at is null or ends_at>=now()));
 
 create or replace function public.smollan_play_digital_game(
  p_slug text,p_fingerprint text,p_phone text default null,p_answers jsonb default '{}'::jsonb,p_consent boolean default false
-) returns jsonb language plpgsql security definer set search_path=public as $$
+) returns jsonb language plpgsql security invoker set search_path=public as $
 declare
  g public.smollan_digital_games%rowtype;
  chosen jsonb;
@@ -74,4 +77,5 @@ begin
  values(g.id,p_fingerprint,nullif(trim(p_phone),''),coalesce(p_answers,'{}'::jsonb),prize_name,coalesce(p_consent,false));
  return jsonb_build_object('success',true,'prize',prize_name);
 end $$;
-grant execute on function public.smollan_play_digital_game(text,text,text,jsonb,boolean) to anon, authenticated;
+revoke all on function public.smollan_play_digital_game(text,text,text,jsonb,boolean) from public, anon, authenticated;
+grant execute on function public.smollan_play_digital_game(text,text,text,jsonb,boolean) to service_role;
