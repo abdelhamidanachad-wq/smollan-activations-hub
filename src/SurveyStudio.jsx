@@ -13,11 +13,11 @@ const templates=[
 const makeSlug=()=>Math.random().toString(36).slice(2,8)+'-'+Date.now().toString(36);
 const blankQuestion=()=>q('q-'+makeSlug(),'text','Nouvelle question','New question','سؤال جديد',false);
 export default function SurveyStudio({db,session,membership,projects=[],forms=[],setForms=()=>{},onToast=()=>{}}){
- const [editing,setEditing]=useState(null),[projectId,setProjectId]=useState(''),[title,setTitle]=useState({fr:'',en:'',ar:''}),[defaultLanguage,setDefaultLanguage]=useState('fr'),[enabled,setEnabled]=useState(['fr','ar','en']),[questions,setQuestions]=useState([]),[activeLanguage,setActiveLanguage]=useState('fr'),[preview,setPreview]=useState(false),[saving,setSaving]=useState(false),[error,setError]=useState('');
+ const [editing,setEditing]=useState(null),[projectId,setProjectId]=useState(''),[title,setTitle]=useState({fr:'',en:'',ar:''}),[defaultLanguage,setDefaultLanguage]=useState('fr'),[enabled,setEnabled]=useState(['fr','ar','en']),[questions,setQuestions]=useState([]),[activeLanguage,setActiveLanguage]=useState('fr'),[preview,setPreview]=useState(false),[saving,setSaving]=useState(false),[error,setError]=useState(''),[templateKey,setTemplateKey]=useState('');
  const surveys=useMemo(()=>forms.filter(f=>f.form_type==='survey'),[forms]);
  const canWrite=!!(db&&session?.user&&membership?.is_active&&!['read_only_client'].includes(membership.role));
  const begin=(form=null,template=null)=>{
-  setEditing(form?.id||null);setProjectId(form?.project_id||'');
+  setEditing(form?.id||null);setTemplateKey(form?.template_key||template?.key||'');setProjectId(form?.project_id||'');
   if(form){setTitle({fr:form.translations?.fr?.title||form.title||'',en:form.translations?.en?.title||'',ar:form.translations?.ar?.title||''});setDefaultLanguage(form.default_language||'fr');setEnabled(form.available_languages||['fr','ar','en']);setQuestions(form.questions||[])}
   else if(template){setTitle({...template.title});setDefaultLanguage('fr');setEnabled(['fr','ar','en']);setQuestions(template.questions.map(x=>({...x,id:makeSlug()})))}
   else{setTitle({fr:'',en:'',ar:''});setDefaultLanguage('fr');setEnabled(['fr','ar','en']);setQuestions([blankQuestion()])}
@@ -30,10 +30,10 @@ export default function SurveyStudio({db,session,membership,projects=[],forms=[]
   if(enabled.some(l=>!title[l]?.trim())){setError('Add a title for every enabled language.');return}
   setSaving(true);setError('');
   const translations=Object.fromEntries(enabled.map(l=>[l,{title:title[l]}]));
-  const payload={project_id:projectId,title:title[defaultLanguage].trim(),slug:editing?(surveys.find(x=>x.id===editing)?.slug||makeSlug()):makeSlug(),form_type:'survey',questions,template_key:surveys.find(x=>x.id===editing)?.template_key||null,default_language:defaultLanguage,available_languages:enabled,translations,is_active:true,created_by:session.user.id,updated_at:new Date().toISOString()};
+  const payload={project_id:projectId,title:title[defaultLanguage].trim(),slug:editing?(surveys.find(x=>x.id===editing)?.slug||makeSlug()):makeSlug(),form_type:'survey',questions,template_key:templateKey||null,default_language:defaultLanguage,available_languages:enabled,translations,is_active:true,created_by:session.user.id,updated_at:new Date().toISOString()};if(editing)delete payload.created_by;
   const result=editing?await db.from('smollan_project_forms').update(payload).eq('id',editing).select().single():await db.from('smollan_project_forms').insert(payload).select().single();
   setSaving(false);if(result.error){setError(result.error.message);return}
-  setForms(old=>editing?old.map(x=>x.id===editing?result.data:x):[result.data,...old]);setEditing(null);setQuestions([]);onToast(editing?'Survey updated':'Survey published'); 
+  setForms(old=>editing?old.map(x=>x.id===editing?result.data:x):[result.data,...old]);setEditing(null);setQuestions([]);setTemplateKey('');onToast(editing?'Survey updated':'Survey published'); 
  };
  if(questions.length)return <section className="survey-studio">
   <div className="studio-heading"><div><div className="eyebrow">FIELD INTELLIGENCE / FORM BUILDER</div><h1>{editing?'Edit survey':'Build a survey'}</h1><p className="lead">Choose a project, start from a proven template, then edit every question and language.</p></div><button className="btn secondary" onClick={()=>setQuestions([])}>Back to surveys</button></div>
