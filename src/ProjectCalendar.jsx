@@ -1,0 +1,16 @@
+import React,{useMemo,useState} from 'react';
+import {ChevronLeft,ChevronRight,CalendarDays} from 'lucide-react';
+const monthName=d=>d.toLocaleDateString('en-US',{month:'long',year:'numeric'});
+const dayKey=d=>d.toISOString().slice(0,10);
+export default function ProjectCalendar({projects=[],onOpenProject=()=>{}}){
+ const [cursor,setCursor]=useState(()=>new Date(new Date().getFullYear(),new Date().getMonth(),1));
+ const first=new Date(cursor.getFullYear(),cursor.getMonth(),1),start=new Date(first);start.setDate(1-first.getDay());
+ const days=Array.from({length:42},(_,i)=>{const d=new Date(start);d.setDate(start.getDate()+i);return d});
+ const monthProjects=useMemo(()=>projects.filter(p=>p.start_date||p.end_date),[projects]);
+ const inRange=(p,d)=>{const k=dayKey(d),a=p.start_date||p.end_date,b=p.end_date||p.start_date;return a&&b&&k>=a&&k<=b};
+ const upcoming=monthProjects.filter(p=>(p.end_date||p.start_date)>=dayKey(new Date())).sort((a,b)=>(a.start_date||'').localeCompare(b.start_date||'')).slice(0,8);
+ return <section className="project-calendar"><div className="studio-heading"><div><div className="eyebrow">DELIVERY TIMELINE / PORTFOLIO</div><h1>Project calendar</h1><p className="lead">See every activation window, overlapping delivery dates and upcoming starts in one calendar.</p></div><div className="calendar-nav"><button className="btn secondary small" onClick={()=>setCursor(new Date())}>Today</button><button className="icon-button" onClick={()=>setCursor(new Date(cursor.getFullYear(),cursor.getMonth()-1,1))}><ChevronLeft size={18}/></button><strong>{monthName(cursor)}</strong><button className="icon-button" onClick={()=>setCursor(new Date(cursor.getFullYear(),cursor.getMonth()+1,1))}><ChevronRight size={18}/></button></div></div>
+ <div className="calendar-layout"><div className="studio-card calendar-board"><div className="calendar-weekdays">{['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(x=><span key={x}>{x}</span>)}</div><div className="calendar-days">{days.map(d=>{const active=d.getMonth()===cursor.getMonth(),events=monthProjects.filter(p=>inRange(p,d));return <div key={dayKey(d)} className={'calendar-day '+(!active?'muted':'')+(dayKey(d)===dayKey(new Date())?' today':'')}><span className="calendar-day-number">{d.getDate()}</span><div className="calendar-events">{events.slice(0,3).map(p=><button key={p.id} title={p.name} onClick={()=>onOpenProject(p)} style={{borderLeftColor:p.brand?.brand_primary_color||'#245de8'}}>{p.name}</button>)}{events.length>3&&<small>+{events.length-3} more</small>}</div></div>})}</div></div>
+ <aside className="studio-card"><div className="studio-card-head"><strong>Upcoming activations</strong><span>{upcoming.length}</span></div>{upcoming.length?upcoming.map(p=><button className="calendar-upcoming" key={p.id} onClick={()=>onOpenProject(p)}><span className="calendar-date-block"><strong>{new Date((p.start_date||p.end_date)+'T12:00:00').getDate()}</strong><small>{new Date((p.start_date||p.end_date)+'T12:00:00').toLocaleDateString('en-US',{month:'short'})}</small></span><span><strong>{p.name}</strong><small>{p.client||'Client'} · {p.start_date||'—'}{p.end_date?' → '+p.end_date:''}</small></span></button>):<p className="muted-note">No dated projects in the upcoming portfolio.</p>}</aside></div>
+ </section>;
+}
