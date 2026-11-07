@@ -27,7 +27,7 @@ begin
 end $$;
 revoke all on function public.smollan_get_digital_game(text) from public;
 grant execute on function public.smollan_get_digital_game(text) to anon, authenticated;
-grant select (id,title,game_type,slug,default_language,available_languages,translations,questions,rules,starts_at,ends_at) on public.smollan_digital_games to anon;
+grant select (id,title,game_type,slug,default_language,available_languages,translations,questions,rules,status,starts_at,ends_at) on public.smollan_digital_games to anon;
 create policy "published games public read" on public.smollan_digital_games for select to anon, authenticated using (status='Published' and (starts_at is null or starts_at<=now()) and (ends_at is null or ends_at>=now()));
 
 create or replace function public.smollan_play_digital_game(
