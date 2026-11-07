@@ -74,4 +74,4 @@ Set these as Vercel server environment variables (not public `VITE_` secrets):
 - `SUPABASE_URL`
 - `SUPABASE_ANON_KEY`
 
-The assistant endpoint is `/api/assistant`. It forwards the signed-in user's JWT to Supabase so row-level security remains in force. The AI endpoint is unavailable until these server variables are configured.
+The assistant endpoint is `/api/assistant`. It forwards the signed-in user's JWT to Supabase so row-level security remains in force. The AI endpoint is unavailable until these server variables are configured.\n\nDeploy the public QR game runtime with `supabase functions deploy digital-game-play`. The Edge Function uses Supabase's server-provided `SUPABASE_SERVICE_ROLE_KEY`; never expose it in browser variables. The prize-allocation RPC is executable only by `service_role`, while public game lookup is limited to published-game display columns.
