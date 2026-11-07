@@ -65,7 +65,7 @@ export default function ProjectWorkspace({db,session,membership,project,projects
   };
   const addMilestone=async()=>{
     if(!canWrite||!milestone.title.trim()||!milestone.due){onToast('Enter a milestone title and due date.');return}
-    const r=await db.from('smollan_project_tasks').insert({project_id:projectId,title:milestone.title.trim(),due_date:milestone.due,description:'Planning phase: '+milestone.phase,status:'todo',priority:'medium',task_type:'planning',due_date:milestone.due,created_by:session.user.id}).select().single();
+    const r=await db.from('smollan_project_tasks').insert({project_id:projectId,title:milestone.title.trim(),description:'Planning phase: '+milestone.phase,status:'todo',priority:'medium',task_type:'planning',due_date:milestone.due,created_by:session.user.id}).select().single();
     if(r.error){onToast(r.error.message);return}setTasks(x=>[...x,r.data]);setMilestone({title:'',due:'',owner:'Planning',phase:'VSD'});onToast('Planning milestone added');
   };
   const addMaterial=async()=>{
