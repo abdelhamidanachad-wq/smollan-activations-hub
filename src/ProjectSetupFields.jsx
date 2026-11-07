@@ -15,7 +15,7 @@ export default function ProjectSetupFields({value,setValue}){
  <section className="setup-section"><h3>02 · Promoters & payroll</h3><div className="form-grid">
  {select('promoters_required','Promoters required',['No','Yes'])}{text('promoter_count','Total promoter headcount','number')}
  {select('payroll_model','Payroll model',['Project salary','Custom per promoter','Mixed'])}{text('base_salary','Base salary (MAD)','number')}
- {area('allowances','Allowances / increments (transport, meal, medical test, documents)')}{area('staffing_plan','Promoter allocation by city / banner / store (one location per line; include headcount)')}</div></section>
+ {area('allowances','Allowances / increments (transport, meal, medical test, documents)')}{area('staffing_plan','Promoter allocation by city / banner / store (one location per line; include headcount)')}{area('custom_payroll','Custom salary by promoter (name | base | transport | launch | medical | documents)')}</div></section>
  <section className="setup-section"><h3>03 · Tasting, PLV, goodies & uniforms</h3><div className="form-grid">
  {select('tasting_required','Tasting required',['No','Yes'])}{area('tasting_items','Tasting kit items')}
  {select('plv_required','PLV production required',['No','Yes'])}{area('plv_items','PLV types / quantities')}
