@@ -16,14 +16,14 @@ create policy "staff read digital game entries" on public.smollan_digital_game_e
 using (exists(select 1 from public.smollan_memberships m where m.user_id=auth.uid() and m.is_active and m.role in ('platform_admin','leadership','activation_coordinator','field_operations','supervisor')));
 
 create or replace function public.smollan_get_digital_game(p_slug text)
-returns jsonb language plpgsql security invoker set search_path=public as $
-declare g public.smollan_digital_games%rowtype;
+returns jsonb language plpgsql security invoker set search_path=public as $$
+declare v jsonb;
 begin
- select * into g from public.smollan_digital_games where slug=p_slug and status='Published'
+ select jsonb_build_object('id',id,'title',title,'game_type',game_type,'default_language',default_language,
+ 'available_languages',available_languages,'translations',translations,'questions',questions,'rules',rules)
+ into v from public.smollan_digital_games where slug=p_slug and status='Published'
  and (starts_at is null or starts_at<=now()) and (ends_at is null or ends_at>=now());
- if not found then return null; end if;
- return jsonb_build_object('id',g.id,'title',g.title,'game_type',g.game_type,'default_language',g.default_language,
- 'available_languages',g.available_languages,'translations',g.translations,'questions',g.questions,'rules',g.rules);
+ return v;
 end $$;
 revoke all on function public.smollan_get_digital_game(text) from public;
 grant execute on function public.smollan_get_digital_game(text) to anon, authenticated;
