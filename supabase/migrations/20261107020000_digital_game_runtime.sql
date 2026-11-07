@@ -47,12 +47,15 @@ begin
  if coalesce((g.rules->>'consent_text')::text,'')<>'' and not coalesce(p_consent,false) then raise exception 'Consent is required to play'; end if;
  select id into existing_id from public.smollan_digital_game_entries where game_id=g.id and participant_fingerprint=p_fingerprint;
  if existing_id is not null then raise exception 'This device has already played'; end if;
+ if g.game_type='quiz' and jsonb_array_length(g.questions)=0 then raise exception 'This quiz has no questions configured'; end if;
  if coalesce(trim(p_phone),'')<>'' and (select count(*) from public.smollan_digital_game_entries where game_id=g.id and participant_phone=trim(p_phone))>=g.max_plays_per_phone then
    raise exception 'The play limit for this mobile number has been reached';
  end if;
  select sum(greatest(0,coalesce((e.value->>'weight')::numeric,1))) into total_weight
  from jsonb_array_elements(g.prizes) e(value) where coalesce((e.value->>'quantity')::integer,0)>0;
- if coalesce(total_weight,0)>0 then
+ if g.game_type='quiz' and exists(select 1 from jsonb_array_elements(g.questions) with ordinality x(elem,ord) where coalesce(p_answers->>(x.ord-1)::text,'')<>coalesce(x.elem->>'correct_answer','')) then
+  prize_name:='Thank you for playing';
+ elsif coalesce(total_weight,0)>0 then
   select idx,elem into chosen_idx,chosen from (
    select ordinality idx,elem,
     sum(greatest(0,coalesce((elem->>'weight')::numeric,1))) over(order by ordinality) cumulative,
